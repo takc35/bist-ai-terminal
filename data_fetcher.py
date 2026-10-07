@@ -3,16 +3,15 @@ import yfinance as yf
 
 def fetch_bist_ticker(ticker_symbol):
     """
-    BIST, ABD hisseleri, Kripto ve Emtialar için canlı veri çeker.
+    BIST, ABD Hisseleri, Kripto ve Emtialar için güvenli canlı veri çeker.
     """
-    sym = ticker_symbol.upper().strip()
+    sym = str(ticker_symbol).upper().strip()
     
-    # Özel Sembol Eşleştirmeleri
     symbol_map = {
         "ONS_ALTIN": "GC=F",
         "ONS_GUMUS": "SI=F",
         "PETROL": "BZ=F",
-        "USDTRY": "USDTRY=X",
+        "USDTRY": "TRY=X",
         "EURTRY": "EURTRY=X",
         "BTCUSDT": "BTC-USD",
         "ETHUSDT": "ETH-USD"
@@ -29,11 +28,11 @@ def fetch_bist_ticker(ticker_symbol):
 
     try:
         stock = yf.Ticker(target_symbol)
-        df = stock.history(period="1y")
-        if df.empty or len(df) < 5:
+        df = stock.history(period="5d")
+        if df.empty or len(df) < 2:
             return None
         df = df.reset_index()
-        df = df.dropna(subset=["Close", "High", "Low", "Open"])
+        df = df.dropna(subset=["Close"])
         df = df.rename(columns={
             "Date": "Date", "Open": "Open", "High": "High",
             "Low": "Low", "Close": "Close", "Volume": "Volume"
@@ -44,16 +43,16 @@ def fetch_bist_ticker(ticker_symbol):
 
 def get_market_overview():
     """
-    Emtia, Döviz, ABD Hisseleri ve Fonlar için anlık canlı fiyat verilerini hazırlar.
+    Döviz, Emtia ve ABD Hisseleri için hata korumalı canlı veri listesi üretir.
     """
     items = {
-        "Gram Altın": {"symbol": "GC=F", "is_gram_gold": True},
+        "USD/TRY": {"symbol": "TRY=X", "unit": "₺"},
+        "EUR/TRY": {"symbol": "EURTRY=X", "unit": "₺"},
         "Ons Altın": {"symbol": "GC=F", "unit": "$"},
-        "Gram Gümüş": {"symbol": "SI=F", "is_gram_silver": True},
         "Ons Gümüş": {"symbol": "SI=F", "unit": "$"},
         "Brent Petrol": {"symbol": "BZ=F", "unit": "$"},
-        "USD/TRY": {"symbol": "USDTRY=X", "unit": "₺"},
-        "EUR/TRY": {"symbol": "EURTRY=X", "unit": "₺"},
+        "Gram Altın": {"symbol": "GC=F", "is_gram_gold": True, "unit": "₺"},
+        "Gram Gümüş": {"symbol": "SI=F", "is_gram_silver": True, "unit": "₺"},
         "NVDA": {"symbol": "NVDA", "unit": "$"},
         "AAPL": {"symbol": "AAPL", "unit": "$"},
         "TSLA": {"symbol": "TSLA", "unit": "$"},
@@ -61,31 +60,33 @@ def get_market_overview():
         "ETH/USDT": {"symbol": "ETH-USD", "unit": "$"}
     }
     
-    # USDTRY Kurunu al (Gram Altın ve Gram Gümüş hesabı için)
-    usd_df = fetch_bist_ticker("USDTRY")
-    usd_rate = float(usd_df["Close"].iloc[-1]) if usd_df is not None else 34.0
+    # Varsayılan USD Kuru (Veri alınamazsa fallback olarak kullanılır)
+    usd_rate = 34.50
+    try:
+        usd_df = fetch_bist_ticker("USDTRY")
+        if usd_df is not None and not usd_df.empty:
+            usd_rate = float(usd_df["Close"].iloc[-1])
+    except Exception:
+        pass
     
     results = {}
     for name, meta in items.items():
-        df = fetch_bist_ticker(meta["symbol"])
-        if df is not None and len(df) >= 2:
-            last_p = float(df["Close"].iloc[-1])
-            prev_p = float(df["Close"].iloc[-2])
-            
-            # Gram Altın Hesabı: (Ons Fiyatı * Dolar Kuru) / 31.1035
-            if meta.get("is_gram_gold"):
-                last_p = (last_p * usd_rate) / 31.1035
-                prev_p = (float(df["Close"].iloc[-2]) * usd_rate) / 31.1035
-                unit = "₺"
-            # Gram Gümüş Hesabı: (Ons Gümüş * Dolar Kuru) / 31.1035
-            elif meta.get("is_gram_silver"):
-                last_p = (last_p * usd_rate) / 31.1035
-                prev_p = (float(df["Close"].iloc[-2]) * usd_rate) / 31.1035
-                unit = "₺"
-            else:
-                unit = meta.get("unit", "")
+        try:
+            df = fetch_bist_ticker(meta["symbol"])
+            if df is not None and len(df) >= 2:
+                last_p = float(df["Close"].iloc[-1])
+                prev_p = float(df["Close"].iloc[-2])
+                
+                if meta.get("is_gram_gold"):
+                    last_p = (last_p * usd_rate) / 31.1035
+                    prev_p = (prev_p * usd_rate) / 31.1035
+                elif meta.get("is_gram_silver"):
+                    last_p = (last_p * usd_rate) / 31.1035
+                    prev_p = (prev_p * usd_rate) / 31.1035
 
-            chg = ((last_p - prev_p) / prev_p) * 100
-            results[name] = {"price": last_p, "change": chg, "unit": unit}
+                chg = ((last_p - prev_p) / prev_p) * 100 if prev_p != 0 else 0.0
+                results[name] = {"price": last_p, "change": chg, "unit": meta["unit"]}
+        except Exception:
+            continue
             
     return results
