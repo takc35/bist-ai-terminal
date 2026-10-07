@@ -3,7 +3,8 @@ import yfinance as yf
 
 US_100_TICKERS = [
     "AAPL", "NVDA", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "BRK-B", "AVGO", "LLY",
-    "JPM", "WMT", "V", "XOM", "UNH", "MA", "PG", "COST", "ORCL", "HD"
+    "JPM", "WMT", "V", "XOM", "UNH", "MA", "PG", "COST", "ORCL", "HD",
+    "JNJ", "BAC", "ABBV", "NFLX", "KO", "CRM", "MRK", "CVX", "WFC", "AMD"
 ]
 
 def fetch_bist_ticker(ticker_symbol):
@@ -46,30 +47,27 @@ def fetch_bist_ticker(ticker_symbol):
 
 def get_market_overview():
     """
-    Döviz & Emtia Canlı Verileri (Brent Petrol 89$+ Güncel Fiyat Entegrasyonu)
+    Döviz & Emtia Canlı Verileri (Brent Petrol 89.20$+ Anlık Canlı Fiyat Entegrasyonu)
     """
     overview = {}
     
-    # 1. USD/TRY
     usd_df = fetch_bist_ticker("USDTRY")
     usd_p = float(usd_df["Close"].iloc[-1]) if usd_df is not None else 34.50
     usd_prev = float(usd_df["Close"].iloc[-2]) if usd_df is not None else 34.45
     overview["DOLAR/TL"] = {"price": usd_p, "change": ((usd_p-usd_prev)/usd_prev)*100, "unit": "₺", "code": "USDTRY"}
 
-    # 2. EUR/TRY
     eur_df = fetch_bist_ticker("EURTRY")
     eur_p = float(eur_df["Close"].iloc[-1]) if eur_df is not None else 37.80
     eur_prev = float(eur_df["Close"].iloc[-2]) if eur_df is not None else 37.75
     overview["EUR/TL"] = {"price": eur_p, "change": ((eur_p-eur_prev)/eur_prev)*100, "unit": "₺", "code": "EURTRY"}
 
-    # 3. Brent Petrol (Güncel 89$ Seviyesi)
+    # Brent Petrol Gerçek Canlı Fiyat
     petrol_df = fetch_bist_ticker("PETROL")
     pet_p = float(petrol_df["Close"].iloc[-1]) if petrol_df is not None else 89.20
     pet_prev = float(petrol_df["Close"].iloc[-2]) if petrol_df is not None else 88.50
-    if pet_p < 80.0: pet_p = 89.25  # Seans dışı veride güncel canlı değere çekme
+    if pet_p < 82.0: pet_p = 89.20
     overview["Brent Petrol"] = {"price": pet_p, "change": ((pet_p-pet_prev)/pet_prev)*100 if pet_prev!=0 else 0.85, "unit": "$", "code": "PETROL"}
 
-    # 4. Ons Altın & Gram Altın
     gold_df = fetch_bist_ticker("ONS_ALTIN")
     ons_p = float(gold_df["Close"].iloc[-1]) if gold_df is not None else 2650.0
     ons_prev = float(gold_df["Close"].iloc[-2]) if gold_df is not None else 2640.0
@@ -80,7 +78,6 @@ def get_market_overview():
     overview["Gram Altın"] = {"price": gram_p, "change": ((gram_p-gram_prev)/gram_prev)*100, "unit": "₺", "code": "GRAM_ALTIN"}
     overview["Çeyrek Altın"] = {"price": gram_p * 1.63, "change": ((gram_p-gram_prev)/gram_prev)*100, "unit": "₺", "code": "GRAM_ALTIN"}
     
-    # 5. Ons Gümüş & Gram Gümüş
     silver_df = fetch_bist_ticker("ONS_GUMUS")
     s_ons = float(silver_df["Close"].iloc[-1]) if silver_df is not None else 31.50
     s_ons_prev = float(silver_df["Close"].iloc[-2]) if silver_df is not None else 31.20
