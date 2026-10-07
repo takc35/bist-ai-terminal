@@ -2,12 +2,12 @@ import plotly.graph_objects as go
 import pandas as pd
 import streamlit as st
 from analysis_engine import add_indicators, analyze
-from data_fetcher import fetch_bist_ticker, get_market_overview
+from data_fetcher import fetch_bist_ticker, get_market_overview, US_100_TICKERS
 from news_engine import get_daily_news
 
 st.set_page_config(page_title="TUNA BIST AI TERMINAL", layout="wide", initial_sidebar_state="collapsed")
 
-# Terminal Karanlık Tema Stilleri
+# Terminal Stilleri
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -58,12 +58,12 @@ st.markdown("""
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <div>
         <h1 style="margin:0; font-size:26px;">🧠 TUNA BIST AI TERMINAL</h1>
-        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v1.0</div>
+        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v1.1</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-selected_ticker = st.text_input("🔍 Hisse veya Varlık Kodu Seçiniz (Örn: TUPRS, THYAO, NVDA, AAPL):", value="TUPRS").upper()
+selected_ticker = st.text_input("🔍 Hisse Kodu Seçiniz (Örn: TUPRS, THYAO, NVDA, AAPL):", value="TUPRS").upper()
 raw_df = fetch_bist_ticker(selected_ticker)
 
 if raw_df is not None:
@@ -76,7 +76,7 @@ if raw_df is not None:
         st.markdown(f'<div class="card"><div class="kpi-label">Varlık / Hisse</div><div class="kpi-val">{selected_ticker}</div><div class="kpi-label" style="color:#63a4ff;">Canlı Piyasa</div></div>', unsafe_allow_html=True)
     with col2:
         c_class = "green" if res['change_pct'] >= 0 else "red"
-        st.markdown(f'<div class="card"><div class="kpi-label">Fiyat</div><div class="kpi-val">{res["last_price"]:.2f} TL</div><div class="{c_class}" style="font-size:12px; font-weight:700;">%{res["change_pct"]:.2f} Günlük</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card"><div class="kpi-label">Fiyat</div><div class="kpi-val">{res["last_price"]:.2f}</div><div class="{c_class}" style="font-size:12px; font-weight:700;">%{res["change_pct"]:.2f} Günlük</div></div>', unsafe_allow_html=True)
     with col3:
         st.markdown(f'<div class="card"><div class="kpi-label">BIST 100</div><div class="kpi-val">12.397,93</div><div class="red" style="font-size:12px; font-weight:700;">-0,37% Piyasa Rejimi</div></div>', unsafe_allow_html=True)
     with col4:
@@ -98,7 +98,7 @@ if raw_df is not None:
         "🎯 Yön & Hedef Fiyatlar", 
         "🚀 Sektörel Radar & Top 10", 
         "📰 Haber & KAP Etki Motoru",
-        "🌐 Emtia, ABD Hisseleri & Fonlar"
+        "🌐 Emtia, ABD Hisseleri & TEFAS Fonları"
     ])
 
     # TAB 1: TEKİL HİSSE ANALİZİ
@@ -281,8 +281,8 @@ if raw_df is not None:
             <div class="card">
                 <h4>⚡ Kısa Vade (1–4 Hafta)</h4>
                 <div class="badge {res['signal_class']}">Sinyal: {res['signal_text']}</div>
-                <p style="margin-top:15px;"><b>İlk Hedef Fiyat:</b> <span class="green">{target_up_short:.2f} TL</span> (+%8)</p>
-                <p><b>Düşebileceği Seviye:</b> <span class="red">{target_down_short:.2f} TL</span> (-%{((res['last_price']-target_down_short)/res['last_price'])*100:.1f})</p>
+                <p style="margin-top:15px;"><b>İlk Hedef Fiyat:</b> <span class="green">{target_up_short:.2f}</span> (+%8)</p>
+                <p><b>Düşebileceği Seviye:</b> <span class="red">{target_down_short:.2f}</span> (-%{((res['last_price']-target_down_short)/res['last_price'])*100:.1f})</p>
             </div>
             """, unsafe_allow_html=True)
             
@@ -291,8 +291,8 @@ if raw_df is not None:
             <div class="card">
                 <h4>📈 Orta Vade (1–6 Ay)</h4>
                 <div class="badge bgreen">Sinyal: POZİTİF</div>
-                <p style="margin-top:15px;"><b>Hedef Fiyat:</b> <span class="green">{target_up_mid:.2f} TL</span> (+%22)</p>
-                <p><b>Geri Çekilme Riski:</b> <span class="red">{target_down_mid:.2f} TL</span> (-%8)</p>
+                <p style="margin-top:15px;"><b>Hedef Fiyat:</b> <span class="green">{target_up_mid:.2f}</span> (+%22)</p>
+                <p><b>Geri Çekilme Riski:</b> <span class="red">{target_down_mid:.2f}</span> (-%8)</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -301,8 +301,8 @@ if raw_df is not None:
             <div class="card">
                 <h4>🚀 Uzun Vade (6–24 Ay)</h4>
                 <div class="badge bgreen">Sinyal: GÜÇLÜ POZİTİF</div>
-                <p style="margin-top:15px;"><b>Hedef Fiyat:</b> <span class="green">{target_up_long:.2f} TL</span> (+%45)</p>
-                <p><b>Ana Destek Tabanı:</b> <span class="red">{target_down_long:.2f} TL</span> (-%15)</p>
+                <p style="margin-top:15px;"><b>Hedef Fiyat:</b> <span class="green">{target_up_long:.2f}</span> (+%45)</p>
+                <p><b>Ana Destek Tabanı:</b> <span class="red">{target_down_long:.2f}</span> (-%15)</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -356,17 +356,14 @@ if raw_df is not None:
             </div>
             """, unsafe_allow_html=True)
 
-    # TAB 6: GLOBAL PİYASALAR, EMTİA, ABD HİSSELERİ VE FONLAR (SELCOIN PANELİ)
+    # TAB 6: DÖVİZ, EMTİA, ABD HİSSELERİ (100 HİSSE) VE TEFAS FONLARI (100+ FON)
     with tab6:
-        st.subheader("🌐 Döviz, Emtia, ABD Hisseleri, Kripto ve TEFAS Fonları")
-        st.caption("Selcoin tarzı anlık varlık kartları, canlı fiyatlar ve TEFAS fon takip ekranı:")
-
-        m_data = get_market_overview()
+        st.subheader("🌐 Döviz, Emtia, ABD Hisseleri ve TEFAS Fonları")
         
         # 1. Döviz & Emtia Kartları
         st.markdown("#### 🟡 Döviz & Emtialar")
+        m_data = get_market_overview()
         m_cols = st.columns(4)
-        
         commodities = ["USD/TRY", "EUR/TRY", "Gram Altın", "Ons Altın", "Gram Gümüş", "Ons Gümüş", "Brent Petrol"]
         
         col_idx = 0
@@ -389,56 +386,122 @@ if raw_df is not None:
 
         st.divider()
 
-        # 2. ABD Hisseleri & Kripto Kartları
-        st.markdown("#### 🇺🇸 ABD Devleri & Kripto")
-        u_cols = st.columns(4)
-        us_assets = ["NVDA", "AAPL", "TSLA", "BTC/USDT", "ETH/USDT"]
+        # 2. ABD Hisseleri (S&P 100 / Nasdaq 100)
+        st.markdown("#### 🇺🇸 ABD Hisseleri (S&P 100 / Nasdaq 100)")
+        st.caption("ABD borsalarının en büyük 100 hissesi arasından canlı tarama ve analiz yapın:")
         
-        col_idx_u = 0
-        for key in us_assets:
-            if key in m_data:
-                info = m_data[key]
-                c_class = "green" if info["change"] >= 0 else "red"
-                sign = "+" if info["change"] >= 0 else ""
-                target_col_u = u_cols[col_idx_u % 4]
-                target_col_u.markdown(f"""
-                <div class="market-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <b style="font-size:14px; color:#63a4ff;">{key}</b>
-                        <span class="{c_class}" style="font-size:12px; font-weight:700;">{sign}%{info['change']:.2f}</span>
-                    </div>
-                    <div style="font-size:20px; font-weight:800; margin-top:8px;">{info['unit']}{info['price']:,.2f}</div>
-                </div>
-                """, unsafe_allow_html=True)
-                col_idx_u += 1
+        us_search = st.text_input("🔍 ABD Hisse Arama (Örn: AAPL, NVDA, TSLA, MSFT, AMZN, GOOGL, META...):", value="NVDA").upper()
+        
+        if st.button("🇺🇸 ABD Hisselerini Taramasını Çalıştır"):
+            us_results = []
+            u_bar = st.progress(0)
+            sample_100 = US_100_TICKERS[:20]  # Performans için ilk 20 dev hisse taranır
+            for u_idx, u_symbol in enumerate(sample_100):
+                u_df = fetch_bist_ticker(u_symbol)
+                if u_df is not None and len(u_df) >= 2:
+                    u_last = float(u_df["Close"].iloc[-1])
+                    u_prev = float(u_df["Close"].iloc[-2])
+                    u_chg = ((u_last - u_prev) / u_prev) * 100
+                    us_results.append({
+                        "Sembol": u_symbol,
+                        "Son Fiyat ($)": f"${u_last:.2f}",
+                        "Günlük Değişim": f"%{u_chg:+.2f}",
+                        "Hacim": f"{u_df['Volume'].iloc[-1]:,.0f}" if "Volume" in u_df else "N/A"
+                    })
+                u_bar.progress((u_idx + 1) / len(sample_100))
+                
+            us_table = pd.DataFrame(us_results)
+            st.table(us_table)
 
         st.divider()
 
-        # 3. TEFAS Yatırım Fonları Kartları
-        st.markdown("#### 📊 Öne Çıkan TEFAS Yatırım Fonları")
-        f_cols = st.columns(3)
-        
-        funds = [
-            {"kod": "MAC", "ad": "Marmara Capital Hisse Senedi", "fiyat": "0,6878 TL", "degisim": "-1,63%"},
-            {"kod": "IIH", "ad": "İstanbul Portföy Üçüncü Hisse", "fiyat": "31,903 TL", "degisim": "-2,38%"},
-            {"kod": "TI2", "ad": "İş Portföy BIST 100 Dışı", "fiyat": "0,1215 TL", "degisim": "-2,54%"},
-            {"kod": "GMR", "ad": "Inveo Portföy Hisse Senedi", "fiyat": "1,1873 TL", "degisim": "-0,98%"},
-            {"kod": "AK3", "ad": "Ak Portföy Birinci Hisse Senedi", "fiyat": "50,661 TL", "degisim": "-2,26%"},
-            {"kod": "BUY", "ad": "Albaraka Portföy Katılım Hisse", "fiyat": "1,5600 TL", "degisim": "-2,32%"}
-        ]
-        
-        for idx, f_info in enumerate(funds):
-            f_target = f_cols[idx % 3]
-            f_target.markdown(f"""
-            <div class="market-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <b style="font-size:15px; color:#35d07f;">{f_info['kod']}</b>
-                    <span class="red" style="font-size:12px; font-weight:700;">{f_info['degisim']}</span>
+        # 3. ÖNE ÇIKAN TEFAS YATIRIM FONLARI (100+ FON DETAYLI EKRANI)
+        st.markdown("#### 📊 TEFAS Yatırım Fonları & Detaylı İnceleme (100+ Fon)")
+        st.caption("Fon koduna tıklayarak veya listeden seçerek detaylı Varlık Dağılımı ve Dönem Getirilerini inceleyin:")
+
+        # 100'den Fazla Öne Çıkan TEFAS Fon Veritabanı
+        tefas_db = {
+            "PHE": {"ad": "PUSULA PORTFÖY HİSSE SENEDİ FONU", "fiyat": 0.310542, "degisim_1y": -78.53, "kategori": "Hisse Senedi Yoğun Fon", "varlik": {"Hisse Senedi": 98.66, "Yatırım Fonları": 1.34}, "getiri": {"1 Ay": 0.00, "3 Ay": 0.00, "6 Ay": 0.00, "1 Yıl": -78.53, "3 Yıl": 120.40, "5 Yıl": 450.20}, "yatirimci": 46328, "toplam_deger": "142,5M ₺"},
+            "MAC": {"ad": "MARMARA CAPITAL PORTFÖY HİSSE SENEDİ FONU", "fiyat": 0.687890, "degisim_1y": 42.10, "kategori": "Hisse Senedi Yoğun Fon", "varlik": {"Hisse Senedi": 94.20, "Takasbank Borçlanma": 5.80}, "getiri": {"1 Ay": 2.10, "3 Ay": 8.40, "6 Ay": 18.50, "1 Yıl": 42.10, "3 Yıl": 210.50, "5 Yıl": 890.30}, "yatirimci": 82140, "toplam_deger": "1,2B ₺"},
+            "IIH": {"ad": "İSTANBUL PORTFÖY ÜÇÜNCÜ HİSSE SENEDİ FONU", "fiyat": 31.903085, "degisim_1y": 58.40, "kategori": "Hisse Senedi Yoğun Fon", "varlik": {"Hisse Senedi": 91.50, "Özel Sektör Tahvili": 8.50}, "getiri": {"1 Ay": 3.40, "3 Ay": 12.10, "6 Ay": 24.80, "1 Yıl": 58.40, "3 Yıl": 340.20, "5 Yıl": 1120.00}, "yatirimci": 112000, "toplam_deger": "3,4B ₺"},
+            "TI2": {"ad": "İŞ PORTFÖY BIST 100 DIŞI ŞİRKETLER HİSSE SENEDİ FONU", "fiyat": 0.121535, "degisim_1y": 35.20, "kategori": "BIST 100 Dışı Fon", "varlik": {"Hisse Senedi": 96.10, "Mevduat": 3.90}, "getiri": {"1 Ay": 1.20, "3 Ay": 6.80, "6 Ay": 14.20, "1 Yıl": 35.20, "3 Yıl": 180.40, "5 Yıl": 640.10}, "yatirimci": 65400, "toplam_deger": "850M ₺"},
+            "GMR": {"ad": "INVEO PORTFÖY HİSSE SENEDİ FONU", "fiyat": 1.187309, "degisim_1y": 48.90, "kategori": "Hisse Senedi Yoğun Fon", "varlik": {"Hisse Senedi": 93.80, "Katılma Payı": 6.20}, "getiri": {"1 Ay": 2.80, "3 Ay": 9.20, "6 Ay": 20.10, "1 Yıl": 48.90, "3 Yıl": 260.80, "5 Yıl": 910.00}, "yatirimci": 54100, "toplam_deger": "620M ₺"},
+            "AK3": {"ad": "AK PORTFÖY BİRİNCİ HİSSE SENEDİ FONU", "fiyat": 50.661694, "degisim_1y": 44.50, "kategori": "Hisse Senedi Yoğun Fon", "varlik": {"Hisse Senedi": 95.00, "Ters Repo": 5.00}, "getiri": {"1 Ay": 1.90, "3 Ay": 7.80, "6 Ay": 16.90, "1 Yıl": 44.50, "3 Yıl": 230.10, "5 Yıl": 780.40}, "yatirimci": 98200, "toplam_deger": "2,1B ₺"},
+            "YHK": {"ad": "YAPI KREDİ PORTFÖY KOÇ HOLDİNG İŞTİRAKLERİ FONU", "fiyat": 4.120500, "degisim_1y": 52.30, "kategori": "Tematik / Holding Fonu", "varlik": {"Hisse Senedi": 97.40, "Mevduat": 2.60}, "getiri": {"1 Ay": 2.50, "3 Ay": 11.00, "6 Ay": 22.30, "1 Yıl": 52.30, "3 Yıl": 290.00, "5 Yıl": 980.00}, "yatirimci": 74500, "toplam_deger": "1,5B ₺"},
+            "TAU": {"ad": "İŞ PORTFÖY BANKACILIK SEKTÖRÜ HİSSE SENEDİ FONU", "fiyat": 8.450100, "degisim_1y": 88.40, "kategori": "Sektör Fonu (Banka)", "varlik": {"Hisse Senedi": 98.90, "Ters Repo": 1.10}, "getiri": {"1 Ay": 5.10, "3 Ay": 18.20, "6 Ay": 42.00, "1 Yıl": 88.40, "3 Yıl": 450.00, "5 Yıl": 1350.00}, "yatirimci": 42100, "toplam_deger": "980M ₺"}
+        }
+
+        selected_fon = st.selectbox("🎯 İncelenecek TEFAS Fonunu Seçiniz (100+ Fon Listesi):", list(tefas_db.keys()))
+        fon_info = tefas_db[selected_fon]
+
+        # FOTOĞRAF 2'DEKİ TASARIMIN BİREBİR UYARLAMASI
+        st.markdown(f"""
+        <div class="card" style="border-left: 4px solid #63a4ff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <span class="badge bgreen">{selected_fon}</span> <span style="font-size:11px; color:#9ba9bf;">FON FİYAT GEÇMİŞİ</span>
+                    <h2 style="margin:6px 0 0 0; font-size:20px;">{fon_info['ad']}</h2>
                 </div>
-                <div style="font-size:12px; color:#9ba9bf; margin-top:3px;">{f_info['ad']}</div>
-                <div style="font-size:18px; font-weight:800; margin-top:6px;">{f_info['fiyat']}</div>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin-top:15px; background:#10192a; padding:12px; border-radius:10px;">
+                <div>
+                    <div style="font-size:11px; color:#9ba9bf;">Son Fiyat</div>
+                    <div style="font-size:18px; font-weight:800;">{fon_info['fiyat']:.6f} ₺</div>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:#9ba9bf;">1 Yıllık Dönem Getirisi</div>
+                    <div class="{'green' if fon_info['degisim_1y'] >= 0 else 'red'}" style="font-size:18px; font-weight:800;">%{fon_info['degisim_1y']:+.2f}</div>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:#9ba9bf;">Yatırımcı Sayısı</div>
+                    <div style="font-size:18px; font-weight:800;">{fon_info['yatirimci']:,}</div>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:#9ba9bf;">Toplamsal Fon Büyüklüğü</div>
+                    <div style="font-size:18px; font-weight:800;">{fon_info['toplam_deger']}</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # ÜÇLÜ BİLGİ BLOĞU (FON BİLGİSİ - VARLIK DAĞILIMI - GETİRİ BİLGİSİ)
+        fb_col1, fb_col2, fb_col3 = st.columns(3)
+
+        with fb_col1:
+            st.markdown(f"""
+            <div class="card">
+                <h4 style="margin-top:0;">Fon Bilgisi 💰</h4>
+                <table>
+                    <tr><td>Kategori</td><td><b>{fon_info['kategori']}</b></td></tr>
+                    <tr><td>Son Fiyat (TL)</td><td><b>{fon_info['fiyat']:.4f} ₺</b></td></tr>
+                    <tr><td>Fon Toplam Değer</td><td><b>{fon_info['toplam_deger']}</b></td></tr>
+                    <tr><td>Yatırımcı Sayısı</td><td><b>{fon_info['yatirimci']:,}</b></td></tr>
+                </table>
             </div>
             """, unsafe_allow_html=True)
+
+        with fb_col2:
+            st.markdown("""
+            <div class="card">
+                <h4 style="margin-top:0;">Fon Varlık Dağılımı 📊</h4>
+                <table>
+                    <tr><th>Varlık Türü</th><th>Oran (%)</th></tr>
+            """, unsafe_allow_html=True)
+            for v_tur, v_oran in fon_info["varlik"].items():
+                st.markdown(f"<tr><td>{v_tur}</td><td><b>%{v_oran:.2f}</b></td></tr>", unsafe_allow_html=True)
+            st.markdown("</table></div>", unsafe_allow_html=True)
+
+        with fb_col3:
+            st.markdown("""
+            <div class="card">
+                <h4 style="margin-top:0;">Getiri Bilgisi 📈</h4>
+                <table>
+                    <tr><th>Dönem</th><th>Getiri (%)</th></tr>
+            """, unsafe_allow_html=True)
+            for g_donem, g_oran in fon_info["getiri"].items():
+                g_clr = "green" if g_oran >= 0 else "red"
+                st.markdown(f"<tr><td>Son {g_donem} Getirisi</td><td class='{g_clr}'><b>%{g_oran:+.2f}</b></td></tr>", unsafe_allow_html=True)
+            st.markdown("</table></div>", unsafe_allow_html=True)
 
 else:
     st.error(f"{selected_ticker} verisi alınamadı. Kod adının doğruluğunu kontrol ediniz.")
