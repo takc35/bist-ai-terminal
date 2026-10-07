@@ -9,10 +9,7 @@ def fetch_bist_ticker(ticker_symbol):
         if df.empty or len(df) < 50:
             return None
         df = df.reset_index()
-        
-        # Boş (NaN) verileri temizle
         df = df.dropna(subset=["Close", "High", "Low", "Open"])
-        
         df = df.rename(columns={
             "Date": "Date", "Open": "Open", "High": "High",
             "Low": "Low", "Close": "Close", "Volume": "Volume"
