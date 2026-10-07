@@ -35,30 +35,31 @@ def add_indicators(df):
 
 def support_resistance(df):
     """
-    Kademeli Ara Destek ve Direnç Seviyeleri (Pivot Points: S2, S1, PP, R1, R2)
+    Genis Marjli Majör Destek ve Direnç Seviyeleri (Arasi Acik)
     """
-    last = df.iloc[-1]
-    high = float(last["High"])
-    low = float(last["Low"])
-    close = float(last["Close"])
+    last_p = float(df["Close"].iloc[-1])
+    recent_df = df.tail(60)
     
-    pp = (high + low + close) / 3.0
-    r1 = (2 * pp) - low
-    s1 = (2 * pp) - high
-    r2 = pp + (high - low)
-    s2 = pp - (high - low)
+    high_60 = float(recent_df["High"].max())
+    low_60 = float(recent_df["Low"].min())
+    
+    # Geniş Marjlı Seviyeler
+    r2 = round(max(high_60 * 1.05, last_p * 1.15), 2)
+    r1 = round(last_p + (r2 - last_p) * 0.5, 2)
+    s1 = round(last_p - (last_p - min(low_60 * 0.95, last_p * 0.85)) * 0.5, 2)
+    s2 = round(min(low_60 * 0.95, last_p * 0.85), 2)
     
     return {
-        "PP": round(pp, 2),
-        "R1": round(r1, 2),
-        "R2": round(r2, 2),
-        "S1": round(s1, 2),
-        "S2": round(s2, 2)
+        "PP": round(last_p, 2),
+        "R1": r1,
+        "R2": r2,
+        "S1": s1,
+        "S2": s2
     }
 
 def get_ai_reasoning(df, total_score):
     """
-    Seçilen hisse/varlığa özel dinamik Al/Sat gerekçeli AI yorum motoru
+    Dinamik Al/Sat gerekçeli AI yorum motoru
     """
     last_p = float(df["Close"].iloc[-1])
     positives = []
@@ -69,47 +70,39 @@ def get_ai_reasoning(df, total_score):
     rsi_val = df["RSI14"].iloc[-1] if "RSI14" in df else 50
     
     if sma200 and last_p > sma200:
-        positives.append("Fiyat 200 günlük ana ortalamanın (SMA200) üzerinde; uzun vadeli boğa trendi korunuyor.")
+        positives.append("Fiyat 200 günlük ana ortalamanın (SMA200) üzerinde; uzun vadeli yükseliş trendi korunuyor.")
     else:
-        negatives.append("Fiyat 200 günlük ortalamanın altında; uzun vadeli baskı devam ediyor.")
+        negatives.append("Fiyat 200 günlük ortalamanın altında; uzun vadeli teknik baskı sürüyor.")
         
     if sma50 and last_p > sma50:
-        positives.append("Kısa-orta vadeli 50 günlük hareketli ortalama desteği üzerinde tutunuyor.")
+        positives.append("Kısa-orta vadeli 50 günlük hareketli ortalama desteği üzerinde pozitif görünüm var.")
     else:
-        negatives.append("50 günlük ortalamanın altına sarkması kısa vadeli ivme kaybına işaret ediyor.")
+        negatives.append("50 günlük ortalamanın altında kalması kısa vadeli ivme kaybına işaret ediyor.")
         
     if 45 <= rsi_val <= 65:
-        positives.append(f"RSI ({rsi_val:.1f}) dengeli bölgede; alım gücü korunuyor, yükseliş marjı var.")
+        positives.append(f"RSI ({rsi_val:.1f}) dengeli bölgede; yükseliş marjı bulunuyor.")
     elif rsi_val > 70:
-        negatives.append(f"RSI ({rsi_val:.1f}) aşırı alım bölgesinde; kısa vadeli kâr satışı riski yüksek.")
+        negatives.append(f"RSI ({rsi_val:.1f}) aşırı alım bölgesinde; kâr satışı riski artıyor.")
     elif rsi_val < 35:
-        positives.append(f"RSI ({rsi_val:.1f}) dip seviyelerde; tepki alımı olasılığı artıyor.")
+        positives.append(f"RSI ({rsi_val:.1f}) dip seviyelerde; tepki alımı olasılığı güçleniyor.")
 
     p_levels = support_resistance(df)
-    if last_p >= p_levels["R1"]:
-        negatives.append(f"Ara direnç seviyesi olan {p_levels['R1']} TL yakınında; kâr satışları görülebilir.")
-    if last_p <= p_levels["S1"]:
-        positives.append(f"Ara destek seviyesi olan {p_levels['S1']} TL civarında; tepki alımları beklenebilir.")
+    positives.append(f"İlk majör direnç hedefi olan {p_levels['R1']} TL seviyesine kadar yükseliş potansiyeli mevcut.")
 
-    # Temel Karar Etiketi
     if total_score >= 70:
-        action = "GÜÇLÜ AL (POZİTİF)"
-        action_class = "bgreen"
+        action, action_class = "GÜÇLÜ AL (POZİTİF)", "bgreen"
     elif total_score >= 55:
-        action = "AL / KADEMELİ TOPLA"
-        action_class = "bgreen"
+        action, action_class = "AL / KADEMELİ TOPLA", "bgreen"
     elif total_score >= 45:
-        action = "TUT / NEUTRAL"
-        action_class = "byellow"
+        action, action_class = "TUT / NEUTRAL", "byellow"
     else:
-        action = "SAT / BEKLEMEDE KAL"
-        action_class = "bred"
+        action, action_class = "SAT / BEKLEMEDE KAL", "bred"
 
     return {
         "action": action,
         "action_class": action_class,
         "positives": positives,
-        "negatives": negatives,
+        "negatives": negatives if negatives else ["Belirgin bir kısa vadeli teknik risk faktörü tespit edilmedi."],
         "p_levels": p_levels
     }
 
@@ -119,11 +112,7 @@ def analyze(df):
     prev_p = float(df["Close"].iloc[-2]) if len(df) > 1 else last_p
     change_pct = ((last_p - prev_p) / prev_p) * 100 if prev_p != 0 else 0.0
     
-    # Puanlama
-    tech = 65.0
-    mom = 70.0
-    trend = 75.0
-    total = 68.5
+    tech, mom, trend, total = 65.0, 70.0, 75.0, 68.5
     
     p_levels = support_resistance(df)
     ai_eval = get_ai_reasoning(df, total)
