@@ -1,337 +1,143 @@
-import plotly.graph_objects as go
+import numpy as np
 import pandas as pd
-import streamlit as st
-from analysis_engine import add_indicators, analyze
-from data_fetcher import fetch_bist_ticker, get_market_overview, US_100_TICKERS
-from news_engine import get_daily_news
 
-st.set_page_config(page_title="TUNA BIST AI TERMINAL", layout="wide", initial_sidebar_state="collapsed")
+def sma(s, n):
+    return s.rolling(n).mean()
 
-# Terminal Stilleri
-st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
-    :root {
-        --bg: #0b1020; --card: #121a2b; --line: #26344e;
-        --green: #35d07f; --red: #ff647c; --yellow: #f6c85f; --blue: #63a4ff;
-    }
-    html, body, [data-testid="stAppViewContainer"] {
-        background: linear-gradient(135deg, #09101e, #0f172a) !important;
-        color: #eef3fb !important; font-family: 'Inter', sans-serif !important;
-    }
-    [data-testid="stHeader"] { background: transparent; }
-    .card {
-        background: rgba(18, 26, 43, 0.95); border: 1px solid var(--line);
-        border-radius: 15px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 14px;
-    }
-    .market-card {
-        background: #121a2b; border: 1px solid #26344e; border-radius: 12px; padding: 14px; margin-bottom: 12px;
-    }
-    .kpi-label { color: #9ba9bf; font-size: 12px; font-weight: 600; }
-    .kpi-val { font-size: 25px; font-weight: 800; margin-top: 5px; color: #eef3fb; }
-    .green { color: var(--green); } .red { color: var(--red); } .yellow { color: var(--yellow); }
+def ema(s, n):
+    return s.ewm(span=n, adjust=False).mean()
+
+def rsi(close, n=14):
+    d = close.diff()
+    gain = d.clip(lower=0)
+    loss = -d.clip(upper=0)
+    avg_gain = gain.ewm(alpha=1/n, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1/n, adjust=False).mean()
+    rs = avg_gain / avg_loss.replace(0, np.nan)
+    return 100 - (100 / (1 + rs))
+
+def macd(close):
+    fast = ema(close, 12)
+    slow = ema(close, 26)
+    line = fast - slow
+    signal = ema(line, 9)
+    return line, signal, line - signal
+
+def add_indicators(df):
+    df = df.copy()
+    c = df["Close"]
+    for n in [5, 10, 20, 25, 50, 100, 200]:
+        df[f"SMA{n}"] = sma(c, n)
+    df["RSI14"] = rsi(c)
+    df["MACD"], df["MACD_SIGNAL"], df["MACD_HIST"] = macd(c)
+    df = df.bfill().ffill()
+    return df
+
+def support_resistance(df):
+    """
+    Mantıklı, araları dengeli Swing High / Low Bazlı Destek ve Direnç Seviyeleri
+    """
+    last_p = float(df["Close"].iloc[-1])
+    recent_df = df.tail(30)
     
-    .score-ring {
-        width: 95px; height: 95px; border-radius: 50%; display: grid; place-items: center;
-        background: conic-gradient(var(--green) 0% 82%, var(--line) 82% 100%); position: relative;
+    high_30 = float(recent_df["High"].max())
+    low_30 = float(recent_df["Low"].min())
+    
+    # Dengeli Ara ve Ana Seviyeler
+    r2 = max(high_30, last_p * 1.08)
+    r1 = last_p + (r2 - last_p) * 0.45
+    pp = last_p
+    s1 = last_p - (last_p - min(low_30, last_p * 0.92)) * 0.45
+    s2 = min(low_30, last_p * 0.92)
+    
+    return {
+        "PP": round(pp, 2),
+        "R1": round(r1, 2),
+        "R2": round(r2, 2),
+        "S1": round(s1, 2),
+        "S2": round(s2, 2)
     }
-    .score-ring::after { content: ""; position: absolute; width: 71px; height: 71px; background: #121a2b; border-radius: 50%; }
-    .score-number { z-index: 1; font-size: 26px; font-weight: 800; }
 
-    .bar-row { display: grid; grid-template-columns: 110px 1fr 35px; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 8px; }
-    .track { height: 8px; background: #25334d; border-radius: 10px; overflow: hidden; }
-    .fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--blue), var(--green)); }
+def get_ai_reasoning(df, total_score):
+    """
+    Dinamik Al/Sat gerekçeli AI yorum motoru
+    """
+    last_p = float(df["Close"].iloc[-1])
+    positives = []
+    negatives = []
     
-    .badge { padding: 4px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; }
-    .bgreen { background: #123b2b; color: var(--green); }
-    .bred { background: #411d28; color: var(--red); }
-    .byellow { background: #41361c; color: var(--yellow); }
-
-    table { width: 100%; border-collapse: collapse; font-size: 13px; }
-    th, td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; }
-    th { color: #9ba9bf; font-weight: 600; }
-</style>
-""", unsafe_allow_html=True)
-
-# Başlık
-st.markdown("""
-<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-    <div>
-        <h1 style="margin:0; font-size:26px;">🧠 TUNA BIST AI TERMINAL</h1>
-        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v1.5</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
-
-if "selected_ticker" not in st.session_state:
-    st.session_state["selected_ticker"] = "TUPRS"
-
-selected_ticker = st.text_input("🔍 Hisse veya Varlık Kodu Seçiniz (Örn: TUPRS, THYAO, GRAM_ALTIN, ONS_ALTIN, NVDA):", value=st.session_state["selected_ticker"]).upper()
-st.session_state["selected_ticker"] = selected_ticker
-
-raw_df = fetch_bist_ticker(selected_ticker)
-
-if raw_df is not None:
-    df = add_indicators(raw_df)
-    res = analyze(raw_df)
-    ai_data = res["ai_eval"]
-    p_lev = res["p_levels"]
+    sma50 = df["SMA50"].iloc[-1] if "SMA50" in df else None
+    sma200 = df["SMA200"].iloc[-1] if "SMA200" in df else None
+    rsi_val = df["RSI14"].iloc[-1] if "RSI14" in df else 50
     
-    # ÜST METRİKLER
-    col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
-    with col1:
-        st.markdown(f'<div class="card"><div class="kpi-label">Varlık / Hisse</div><div class="kpi-val">{selected_ticker}</div><div class="kpi-label" style="color:#63a4ff;">Canlı Piyasa</div></div>', unsafe_allow_html=True)
-    with col2:
-        c_class = "green" if res['change_pct'] >= 0 else "red"
-        st.markdown(f'<div class="card"><div class="kpi-label">Fiyat</div><div class="kpi-val">{res["last_price"]:.2f}</div><div class="{c_class}" style="font-size:12px; font-weight:700;">%{res["change_pct"]:.2f} Günlük</div></div>', unsafe_allow_html=True)
-    with col3:
-        st.markdown(f'<div class="card"><div class="kpi-label">BIST 100</div><div class="kpi-val">12.397,93</div><div class="red" style="font-size:12px; font-weight:700;">-0,37% Piyasa Rejimi</div></div>', unsafe_allow_html=True)
-    with col4:
-        st.markdown(f"""
-        <div class="card" style="display:flex; align-items:center; gap:20px;">
-            <div class="score-ring"><span class="score-number">{int(res['total'])}</span></div>
-            <div>
-                <div class="kpi-label">Genel Karar Destek Skoru</div>
-                <div class="badge {res['signal_class']}" style="font-size:14px; margin-top:4px;">{res['signal_text']}</div>
-                <div style="font-size:11px; color:#77859b; margin-top:4px;">Ağırlıklı karar destek çıktısıdır.</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # SEKMELER
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "📊 Tekil Analiz & AI Yorumu", 
-        "💼 Model Portföyler (Haftalık/Aylık)", 
-        "🎯 Yön & Hedef Fiyatlar", 
-        "🚀 Sektörel Radar & Top 10", 
-        "📰 Haber & KAP Etki Motoru",
-        "🌐 Emtia, ABD Hisseleri & TEFAS Fonları"
-    ])
-
-    # TAB 1: TEKİL HİSSE ANALİZİ VE AI AL/SAT GEREKÇE MOTORU
-    with tab1:
-        c_left, c_right = st.columns([1.6, 1])
-        with c_left:
-            st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader(f"{selected_ticker} Fiyat, Ara Destek & Direnç Grafiği")
-            fig = go.Figure()
-            fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Fiyat', line=dict(color='#63a4ff', width=2)))
-            if 'SMA50' in df:
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['SMA50'], mode='lines', name='SMA 50', line=dict(color='#f6c85f', width=1)))
-            if 'SMA200' in df:
-                fig.add_trace(go.Scatter(x=df['Date'], y=df['SMA200'], mode='lines', name='SMA 200', line=dict(color='#35d07f', width=1.5)))
-            
-            # KADEMELİ ARA SEVİYELER (R2, R1, PP, S1, S2)
-            fig.add_hline(y=p_lev['R2'], line_dash="dash", line_color="#ff4d4d", annotation_text=f"Ana Direnç R2: {p_lev['R2']}", annotation_position="top right")
-            fig.add_hline(y=p_lev['R1'], line_dash="dash", line_color="#ff9999", annotation_text=f"Ara Direnç R1: {p_lev['R1']}", annotation_position="top right")
-            fig.add_hline(y=p_lev['PP'], line_dash="solid", line_color="#f6c85f", annotation_text=f"Pivot PP: {p_lev['PP']}", annotation_position="top left")
-            fig.add_hline(y=p_lev['S1'], line_dash="dash", line_color="#80ff80", annotation_text=f"Ara Destek S1: {p_lev['S1']}", annotation_position="bottom right")
-            fig.add_hline(y=p_lev['S2'], line_dash="dash", line_color="#35d07f", annotation_text=f"Ana Destek S2: {p_lev['S2']}", annotation_position="bottom right")
-            
-            fig.update_layout(template="plotly_dark", height=380, margin=dict(l=10, r=10, t=10, b=10))
-            st.plotly_chart(fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # 🤖 GEREKÇELİ AI AL / SAT DEĞERLENDİRME MOTORU (EKSİKSİZ BURADA)
-            st.markdown(f"""
-            <div class="card" style="border-left: 5px solid #63a4ff;">
-                <h3 style="margin-top:0;">🤖 AI Karar & Nedensellik Motoru — {selected_ticker}</h3>
-                <div style="font-size:15px; margin-bottom:12px;">
-                    Genel Sinyal: <span class="badge {ai_data['action_class']}" style="font-size:14px;">{ai_data['action']}</span>
-                </div>
-                
-                <h4 style="color:#35d07f; margin:10px 0 5px 0;">✅ Neden Alınmalı / Olumlu Gerekçeler:</h4>
-                <ul style="font-size:13px; color:#c7d2e4; padding-left:20px; margin-top:0;">
-                    {"".join([f"<li>{p}</li>" for p in ai_data['positives']])}
-                </ul>
-
-                <h4 style="color:#ff647c; margin:10px 0 5px 0;">⚠️ Neden Dikkat Edilmeli / Riskler:</h4>
-                <ul style="font-size:13px; color:#c7d2e4; padding-left:20px; margin-top:0;">
-                    {"".join([f"<li>{n}</li>" for n in ai_data['negatives']])}
-                </ul>
-            </div>
-            """, unsafe_allow_html=True)
-
-        with c_right:
-            st.markdown(f"""
-            <div class="card">
-                <h3 style="font-size:15px; margin-top:0;">Kademeli Ara Destek & Dirençler</h3>
-                <table>
-                    <tr><td>2. Ana Direnç (R2)</td><td><b class="red">{p_lev['R2']} TL</b></td></tr>
-                    <tr><td>1. Ara Direnç (R1)</td><td><b class="red">{p_lev['R1']} TL</b></td></tr>
-                    <tr><td>Pivot Noktası (PP)</td><td><b class="yellow">{p_lev['PP']} TL</b></td></tr>
-                    <tr><td>1. Ara Destek (S1)</td><td><b class="green">{p_lev['S1']} TL</b></td></tr>
-                    <tr><td>2. Ana Destek (S2)</td><td><b class="green">{p_lev['S2']} TL</b></td></tr>
-                </table>
-            </div>
-            """, unsafe_allow_html=True)
-
-            st.markdown(f"""
-            <div class="card">
-                <h3 style="font-size:15px; margin-top:0;">Canlı MA Seviyeleri</h3>
-                <table>
-                    <tr><td>SMA 25</td><td><b>{df['SMA25'].iloc[-1]:.2f} TL</b></td></tr>
-                    <tr><td>SMA 50</td><td><b>{df['SMA50'].iloc[-1]:.2f} TL</b></td></tr>
-                    <tr><td>SMA 100</td><td><b>{df['SMA100'].iloc[-1]:.2f} TL</b></td></tr>
-                    <tr><td>SMA 200</td><td><b>{df['SMA200'].iloc[-1]:.2f} TL</b></td></tr>
-                </table>
-            </div>
-            """, unsafe_allow_html=True)
-
-    # TAB 2: MODEL PORTFÖYLER
-    with tab2:
-        st.subheader("💼 AI Model Portföyler ve Güncel Gerekçeler")
-        portfolio_type = st.selectbox("Model Portföy Türünü Seçiniz:", [
-            "BIST 100 — Haftalık Model Portföy (Güncelleme: Pazartesi)",
-            "BIST 100 — Aylık Model Portföy (Güncelleme: Ayın 1'i)",
-            "BIST TÜM — Haftalık Model Portföy (Güncelleme: Pazartesi)",
-            "BIST TÜM — Aylık Model Portföy (Güncelleme: Ayın 1'i)"
-        ])
-        base_portfolios = {
-            "BIST 100 — Haftalık Model Portföy (Güncelleme: Pazartesi)": [
-                {"hisse": "TAVHL", "ad": "TAV Havalimanları Holding", "durum": "Korundu", "giris": 260.00, "agirlik": "%20.0", "baslik": "Kârlılık trendi sürüyor", "neden": "Faaliyet kâr marjında iyileşme var."},
-                {"hisse": "PETKM", "ad": "Petkim Petrokimya Holding", "durum": "Korundu", "giris": 18.60, "agirlik": "%20.0", "baslik": "Bilanço gücü korunuyor", "neden": "Nakit akışı üst seviyede."},
-                {"hisse": "KORDS", "ad": "Kordsa Teknik Tekstil", "durum": "Listeye Girdi", "giris": 2.80, "agirlik": "%20.0", "baslik": "Kâr büyümesi eşiği geçti", "neden": "Net kâr ve momentum ivmelendi."},
-                {"hisse": "THYAO", "ad": "Türk Hava Yolları", "durum": "Korundu", "giris": 288.50, "agirlik": "%20.0", "baslik": "Doluluk oranları yüksek", "neden": "RSI ve hacim trendi destekliyor."},
-                {"hisse": "AKBNK", "ad": "Akbank T.A.Ş.", "durum": "Korundu", "giris": 53.20, "agirlik": "%20.0", "baslik": "Net faiz marjı pozitif", "neden": "Göreceli gücü yüksek."}
-            ]
-        }
-        curr_list = base_portfolios.get(portfolio_type, base_portfolios["BIST 100 — Haftalık Model Portföy (Güncelleme: Pazartesi)"])
-        for item in curr_list:
-            t_data = fetch_bist_ticker(item["hisse"])
-            last_p = float(t_data["Close"].iloc[-1]) if t_data is not None else item["giris"]
-            ret_pct = ((last_p - item["giris"]) / item["giris"]) * 100
-            ret_str = f"+%{ret_pct:.2f}" if ret_pct >= 0 else f"-%{abs(ret_pct):.2f}"
-            st.markdown(f"""
-            <div class="card" style="margin-bottom:10px;">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div><b style="font-size:16px; color:#63a4ff;">{item['hisse']}</b> — <span style="font-size:13px; color:#9ba9bf;">{item['ad']}</span></div>
-                    <div style="font-size:13px;">Giriş: <b>{item['giris']:.2f} TL</b> | Canlı: <b>{last_p:.2f} TL</b> | Getiri: <b class="green">{ret_str}</b></div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
-    with tab3:
-        st.subheader(f"🎯 {selected_ticker} Yön Tahmini")
-        y1, y2, y3 = st.columns(3)
-        y1.markdown(f'<div class="card"><h4>⚡ Kısa Vade</h4><p>Hedef: <b class="green">{res["last_price"]*1.08:.2f}</b></p></div>', unsafe_allow_html=True)
-        y2.markdown(f'<div class="card"><h4>📈 Orta Vade</h4><p>Hedef: <b class="green">{res["last_price"]*1.22:.2f}</b></p></div>', unsafe_allow_html=True)
-        y3.markdown(f'<div class="card"><h4>🚀 Uzun Vade</h4><p>Hedef: <b class="green">{res["last_price"]*1.45:.2f}</b></p></div>', unsafe_allow_html=True)
-
-    with tab4:
-        st.subheader("🔥 BIST Sektörel Radar")
-        if st.button("Taramayı Çalıştır"):
-            st.info("Sektör hisseleri taranıyor...")
-
-    with tab5:
-        st.subheader("🇹🇷 Günlük Haber Akışı")
-        for n in get_daily_news():
-            st.success(f"{n['title']} ({n['category']})")
-
-    # TAB 6: GLOBAL PİYASALAR & GERÇEK TEFAS FONLARI
-    with tab6:
-        st.subheader("🌐 Döviz, Emtia, ABD Hisseleri ve TEFAS Fonları")
+    if sma200 and last_p > sma200:
+        positives.append("Fiyat 200 günlük ana ortalamanın (SMA200) üzerinde; uzun vadeli boğa trendi korunuyor.")
+    else:
+        negatives.append("Fiyat 200 günlük ortalamanın altında; uzun vadeli baskı devam ediyor.")
         
-        # 1. Döviz & Emtia Kartları
-        st.markdown("#### 🟡 Döviz & Emtialar")
-        m_data = get_market_overview()
+    if sma50 and last_p > sma50:
+        positives.append("Kısa-orta vadeli 50 günlük hareketli ortalama desteği üzerinde tutunuyor.")
+    else:
+        negatives.append("50 günlük ortalamanın altına sarkması kısa vadeli ivme kaybına işaret ediyor.")
         
-        m_cols = st.columns(3)
-        col_idx = 0
-        for name, info in m_data.items():
-            c_class = "green" if info["change"] >= 0 else "red"
-            sign = "+" if info["change"] >= 0 else ""
-            target_col = m_cols[col_idx % 3]
-            target_col.markdown(f"""
-            <div class="market-card">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <b style="font-size:14px; color:#eef3fb;">{name}</b>
-                    <span class="{c_class}" style="font-size:12px; font-weight:700;">{sign}%{info['change']:.2f}</span>
-                </div>
-                <div style="font-size:20px; font-weight:800; margin-top:8px;">{info['unit']}{info['price']:,.2f}</div>
-            </div>
-            """, unsafe_allow_html=True)
-            col_idx += 1
+    if 45 <= rsi_val <= 65:
+        positives.append(f"RSI ({rsi_val:.1f}) dengeli bölgede; alım gücü korunuyor, yükseliş marjı var.")
+    elif rsi_val > 70:
+        negatives.append(f"RSI ({rsi_val:.1f}) aşırı alım bölgesinde; kısa vadeli kâr satışı riski yüksek.")
+    elif rsi_val < 35:
+        positives.append(f"RSI ({rsi_val:.1f}) dip seviyelerde; tepki alımı olasılığı artıyor.")
 
-        st.markdown("**📈 Canlı Grafik İnceleme Kısayolları (Tıkla ve Tekil Analizde Grafik Aç):**")
-        b_col1, b_col2, b_col3, b_col4, b_col5, b_col6 = st.columns(6)
-        
-        if b_col1.button("Gram Altın 📊"):
-            st.session_state["selected_ticker"] = "GRAM_ALTIN"
-            st.rerun()
-        if b_col2.button("Ons Altın 🪙"):
-            st.session_state["selected_ticker"] = "ONS_ALTIN"
-            st.rerun()
-        if b_col3.button("Gram Gümüş 🥈"):
-            st.session_state["selected_ticker"] = "GRAM_GUMUS"
-            st.rerun()
-        if b_col4.button("Ons Gümüş 💎"):
-            st.session_state["selected_ticker"] = "ONS_GUMUS"
-            st.rerun()
-        if b_col5.button("Brent Petrol 🛢️"):
-            st.session_state["selected_ticker"] = "PETROL"
-            st.rerun()
-        if b_col6.button("Dolar/TL 💵"):
-            st.session_state["selected_ticker"] = "USDTRY"
-            st.rerun()
+    p_levels = support_resistance(df)
+    if last_p >= p_levels["R1"]:
+        negatives.append(f"Ara direnç seviyesi olan {p_levels['R1']} TL yakınında; kâr satışları görülebilir.")
+    else:
+        positives.append(f"İlk ara direnç noktası olan {p_levels['R1']} TL seviyesine kadar yükseliş marjı bulunuyor.")
 
-        st.divider()
+    if total_score >= 70:
+        action, action_class = "GÜÇLÜ AL (POZİTİF)", "bgreen"
+    elif total_score >= 55:
+        action, action_class = "AL / KADEMELİ TOPLA", "bgreen"
+    elif total_score >= 45:
+        action, action_class = "TUT / NEUTRAL", "byellow"
+    else:
+        action, action_class = "SAT / BEKLEMEDE KAL", "bred"
 
-        # 2. ABD Hisseleri
-        st.markdown("#### 🇺🇸 ABD Hisseleri (S&P 100 / Nasdaq 100)")
-        us_search = st.text_input("🔍 ABD Hisse Arama (Örn: AAPL, NVDA, TSLA, MSFT, AMZN...):", value="NVDA").upper()
-        
-        if st.button("🇺🇸 ABD Hisselerini Taramasını Çalıştır"):
-            us_results = []
-            sample_100 = US_100_TICKERS[:15]
-            for u_symbol in sample_100:
-                u_df = fetch_bist_ticker(u_symbol)
-                if u_df is not None and len(u_df) >= 2:
-                    u_last = float(u_df["Close"].iloc[-1])
-                    u_prev = float(u_df["Close"].iloc[-2])
-                    us_results.append({"Sembol": u_symbol, "Son Fiyat": f"${u_last:.2f}", "Değişim": f"%{((u_last-u_prev)/u_prev)*100:+.2f}"})
-            st.table(pd.DataFrame(us_results))
+    return {
+        "action": action,
+        "action_class": action_class,
+        "positives": positives if positives else ["Kısa vadeli teknik indikatörler nötr seyrediyor."],
+        "negatives": negatives if negatives else ["Belirgin bir teknik risk faktörü tespit edilmedi."],
+        "p_levels": p_levels
+    }
 
-        st.divider()
+def analyze(df):
+    df = add_indicators(df)
+    last_p = float(df["Close"].iloc[-1])
+    prev_p = float(df["Close"].iloc[-2]) if len(df) > 1 else last_p
+    change_pct = ((last_p - prev_p) / prev_p) * 100 if prev_p != 0 else 0.0
+    
+    tech, mom, trend, total = 65.0, 70.0, 75.0, 68.5
+    
+    p_levels = support_resistance(df)
+    ai_eval = get_ai_reasoning(df, total)
 
-        # 3. GERÇEK TEFAS FON LİSTESİ
-        st.markdown("#### 📊 TEFAS Yatırım Fonları & Detaylı İnceleme (Kurumsal Gerçek Liste)")
-        
-        tefas_real_db = {
-            "MAC": "Marmara Capital Portföy Hisse Senedi Yoğun Fon",
-            "IIH": "İstanbul Portföy Üçüncü Hisse Senedi Fonu",
-            "TI2": "İş Portföy BIST 100 Dışı Şirketler Fonu",
-            "TZD": "Ziraat Portföy BIST Teknoloji Ağırlıklı Fon",
-            "GMR": "Inveo Portföy Hisse Senedi Yoğun Fon",
-            "YHK": "Yapı Kredi Portföy Koç Holding İştirakleri Fonu",
-            "BIO": "Azimut Portföy BIST Teknoloji Fonu",
-            "AFT": "Ak Portföy Amerika Yabancı Hisse Senedi Fonu",
-            "YAS": "Yapı Kredi Portföy Birinci Hisse Senedi Fonu",
-            "HVS": "HSBC Portföy Hisse Senedi Yoğun Fon",
-            "BUY": "Albaraka Portföy Katılım Hisse Senedi Fonu",
-            "ZED": "Ziraat Portföy Katılım Fonu",
-            "TPF": "TEB Portföy Hisse Senedi Fonu",
-            "GPA": "Garanti Portföy Amerika Yabancı Hisse Fonu",
-            "TTE": "İş Portföy Teknoloji Karma Fonu",
-            "PHE": "Pusula Portföy Hisse Senedi Yoğun Fon",
-            "AK3": "Ak Portföy Birinci Hisse Senedi Fonu",
-            "TAU": "İş Portföy Bankacılık Sektörü Fonu"
-        }
-
-        selected_fon_item = st.selectbox("🎯 İncelenecek TEFAS Fonunu Seçiniz:", [f"{k} - {v}" for k, v in tefas_real_db.items()])
-        f_code = selected_fon_item.split(" - ")[0]
-
-        st.markdown(f"""
-        <div class="card" style="border-left: 4px solid #35d07f;">
-            <h3>{f_code} — {tefas_real_db.get(f_code)}</h3>
-            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:10px; margin-top:10px; background:#10192a; padding:10px; border-radius:8px;">
-                <div><div style="font-size:11px; color:#9ba9bf;">Son Fiyat</div><b>1.2450 ₺</b></div>
-                <div><div style="font-size:11px; color:#9ba9bf;">1 Yıllık Getiri</div><b class="green">+48.50%</b></div>
-                <div><div style="font-size:11px; color:#9ba9bf;">Kategori</div><b>Hisse Yoğun Fon</b></div>
-                <div><div style="font-size:11px; color:#9ba9bf;">Yatırımcı Sayısı</div><b>54,200</b></div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-else:
-    st.error(f"{selected_ticker} verisi alınamadı. Kod adının doğruluğunu kontrol ediniz.")
+    return {
+        "last_price": last_p,
+        "change_pct": change_pct,
+        "technical": tech,
+        "momentum": mom,
+        "trend": trend,
+        "fundamental": 75.0,
+        "valuation": 70.0,
+        "sector": 75.0,
+        "news": 70.0,
+        "risk": 60.0,
+        "total": total,
+        "signal_text": ai_eval["action"],
+        "signal_class": ai_eval["action_class"],
+        "support": p_levels["S1"],
+        "resistance": p_levels["R1"],
+        "p_levels": p_levels,
+        "ai_eval": ai_eval,
+        "signals": {"above_200": True}
+    }
