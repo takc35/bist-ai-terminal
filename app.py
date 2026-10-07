@@ -54,7 +54,7 @@ st.markdown("""
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <div>
         <h1 style="margin:0; font-size:26px;">🧠 TUNA BIST AI TERMINAL</h1>
-        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v3.0 Ultimate</div>
+        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v3.2 Pro</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -285,23 +285,50 @@ if raw_df is not None:
         y2.markdown(f'<div class="card"><h4>📈 Orta Vade</h4><p>Hedef: <b class="green">{res["last_price"]*1.22:.2f} TL</b> (+%22)</p></div>', unsafe_allow_html=True)
         y3.markdown(f'<div class="card"><h4>🚀 Uzun Vade</h4><p>Hedef: <b class="green">{res["last_price"]*1.45:.2f} TL</b> (+%45)</p></div>', unsafe_allow_html=True)
 
-    # TAB 5: SEKTÖREL RADAR
+    # TAB 5: GENİŞLETİLMİŞ SEKTÖREL RADAR (TÜM BİST SEKTÖRLERİ VE HİSRELERİ)
     with tab5:
-        st.subheader("🔥 BIST Sektörel Radar Top 10")
-        sector_stocks = ["TUPRS", "THYAO", "AKBNK", "GARAN", "ASELS", "EREGL", "SAHOL", "KCHOL", "BIMAS", "SISE"]
-        scan_results = []
-        for ticker in sector_stocks:
-            t_df = fetch_bist_ticker(ticker)
-            if t_df is not None:
-                a = analyze(t_df)
-                scan_results.append({
-                    "Hisse": ticker,
-                    "Genel AI Skor": a["total"],
-                    "Sinyal / Görünüm": a["signal_text"],
-                    "Son Fiyat": f"{a['last_price']:.2f} TL",
-                    "Teknik Skor": a["technical"]
+        st.subheader("🚀 BİST Sektörel Radar & Hisse Taraması")
+        st.caption("Aşağıdaki listeden dilediğiniz sektörü seçerek sektör hisselerinin canlı AI skorlarını inceleyebilirsiniz:")
+
+        sector_db = {
+            "🏦 Bankacılık": ["AKBNK", "GARAN", "ISCTR", "YKBNK", "HALKB", "VAKBN", "SKBNK", "ALBRK"],
+            "✈️ Ulaştırma & Havacılık": ["THYAO", "PGSUS", "CLEBI", "TAVHL"],
+            "🛡️ Savunma Sanayi": ["ASELS", "SDTTR", "ALTNY"],
+            "🏢 Holding & Yatırım": ["SAHOL", "KCHOL", "ALARK", "DOHOL", "AGHOL", "AGESA", "GSDHO"],
+            "🏗️ Emlak & GYO": ["EKGYO", "SNGYO", "TRGYO", "VKGYO", "PSGYO", "KZGYO", "ISGYO"],
+            "📡 İletişim & Telekom": ["TCELL", "TTKOM"],
+            "🏨 Turizm & Otelcilik": ["AYCES", "PKENT", "TEKTU", "METUR", "MAALT"],
+            "⚡ Enerji & Petrol": ["TUPRS", "PETKM", "ASTOR", "KONTR", "SASA", "EUPWR", "GESAN", "CWENE", "AKSEN", "ENJSA"],
+            "🛒 Perakende & Gıda": ["BIMAS", "MGROS", "CCOLA", "AEFES", "SOKM", "ULKER", "TATGD"],
+            "💻 Teknoloji & Yazılım": ["MIATK", "KONTR", "REEDR", "KFEIN", "ARDYZ", "LOGOS", "VBTYZ"],
+            "⛏️ Madencilik & Demir-Çelik": ["EREGL", "KRDMD", "KOZAL", "KOZAA", "IPEKE"],
+            "🚗 Otomotiv & Sanayi": ["FROTO", "TOASO", "DOAS", "OTKAR", "TMSN", "TRACT"]
+        }
+
+        selected_sector = st.selectbox("🎯 İncelemek İstediğiniz Sektörü Seçiniz:", list(sector_db.keys()))
+        target_sector_stocks = sector_db[selected_sector]
+
+        st.markdown(f"#### 📊 {selected_sector} Sektörü Hisseleri Canlı AI Skor Taraması")
+        
+        sector_results = []
+        for sec_symbol in target_sector_stocks:
+            sec_df = fetch_bist_ticker(sec_symbol)
+            if sec_df is not None:
+                sec_res = analyze(sec_df)
+                sector_results.append({
+                    "Hisse Kodu": sec_symbol,
+                    "Son Fiyat": f"{sec_res['last_price']:.2f} TL",
+                    "Günlük Değişim": f"%{sec_res['change_pct']:+.2f}",
+                    "AI Skor": sec_res['total'],
+                    "Teknik Skor": sec_res['technical'],
+                    "Karar Sinyali": sec_res['signal_text']
                 })
-        st.table(pd.DataFrame(scan_results).sort_values("Genel AI Skor", ascending=False))
+        
+        if sector_results:
+            sec_table_df = pd.DataFrame(sector_results).sort_values("AI Skor", ascending=False).reset_index(drop=True)
+            sec_table_df.index = sec_table_df.index + 1
+            sec_table_df.index.name = "Sıra"
+            st.table(sec_table_df)
 
     # TAB 6: TEMETTÜ & BİLANÇO TAKVİMİ
     with tab6:
@@ -430,7 +457,7 @@ if raw_df is not None:
             """, unsafe_allow_html=True)
             for v_tur, v_oran in f_info["varlik"].items():
                 st.markdown(f"<tr><td>{v_tur}</td><td><b>%{v_oran:.2f}</b></td></tr>", unsafe_allow_html=True)
-            st.markdown("</table></div>", unsafe_allow_html=True)
+            st.markdown("</table> destruction</div>", unsafe_allow_html=True)
 
         with fb_col3:
             st.markdown("""
