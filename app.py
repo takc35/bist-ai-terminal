@@ -58,7 +58,7 @@ st.markdown("""
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <div>
         <h1 style="margin:0; font-size:26px;">🧠 TUNA BIST AI TERMINAL</h1>
-        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v1.6</div>
+        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v1.7</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -108,12 +108,12 @@ if raw_df is not None:
         "🌐 Emtia, ABD Hisseleri & TEFAS Fonları"
     ])
 
-    # TAB 1: TEKİL HİSSE ANALİZİ VE DÜZELTİLMİŞ HTML AI YORUM MOTORU
+    # TAB 1: TEKİL HİSSE ANALİZİ VE YERLEŞİK STREAMLIT AI YORUM MOTORU
     with tab1:
         c_left, c_right = st.columns([1.6, 1])
         with c_left:
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.subheader(f"{selected_ticker} Fiyat, Ara Destek & Direnç Grafiği")
+            st.subheader(f"{selected_ticker} Fiyat, Majör Destek & Direnç Grafiği")
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df['Date'], y=df['Close'], mode='lines', name='Fiyat', line=dict(color='#63a4ff', width=2)))
             if 'SMA50' in df:
@@ -121,47 +121,36 @@ if raw_df is not None:
             if 'SMA200' in df:
                 fig.add_trace(go.Scatter(x=df['Date'], y=df['SMA200'], mode='lines', name='SMA 200', line=dict(color='#35d07f', width=1.5)))
             
-            fig.add_hline(y=p_lev['R2'], line_dash="dash", line_color="#ff4d4d", annotation_text=f"Ana Direnç R2: {p_lev['R2']}", annotation_position="top right")
-            fig.add_hline(y=p_lev['R1'], line_dash="dash", line_color="#ff9999", annotation_text=f"Ara Direnç R1: {p_lev['R1']}", annotation_position="top right")
-            fig.add_hline(y=p_lev['S1'], line_dash="dash", line_color="#80ff80", annotation_text=f"Ara Destek S1: {p_lev['S1']}", annotation_position="bottom right")
-            fig.add_hline(y=p_lev['S2'], line_dash="dash", line_color="#35d07f", annotation_text=f"Ana Destek S2: {p_lev['S2']}", annotation_position="bottom right")
+            # GENİŞ MARJLI DİRENÇ VE DESTEKLER
+            fig.add_hline(y=p_lev['R2'], line_dash="dash", line_color="#ff4d4d", annotation_text=f"2. Ana Direnç R2: {p_lev['R2']}", annotation_position="top right")
+            fig.add_hline(y=p_lev['R1'], line_dash="dash", line_color="#ff9999", annotation_text=f"1. Ara Direnç R1: {p_lev['R1']}", annotation_position="top right")
+            fig.add_hline(y=p_lev['S1'], line_dash="dash", line_color="#80ff80", annotation_text=f"1. Ara Destek S1: {p_lev['S1']}", annotation_position="bottom right")
+            fig.add_hline(y=p_lev['S2'], line_dash="dash", line_color="#35d07f", annotation_text=f"2. Ana Destek S2: {p_lev['S2']}", annotation_position="bottom right")
             
             fig.update_layout(template="plotly_dark", height=380, margin=dict(l=10, r=10, t=10, b=10))
             st.plotly_chart(fig, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # 🤖 AI AL/SAT KARAR DESTEK MOTORU (EKSİKSİZ VE BİREBİR HTML FORMATINDA)
-            pos_items = "".join([f"<li>{p}</li>" for p in ai_data['positives']])
-            neg_items = "".join([f"<li>{n}</li>" for n in ai_data['negatives']])
+            # STREAMLIT NATIVE COMPONENT İLE %100 GARANTİLİ YAYINLANAN AI YORUMU
+            st.markdown(f"### 🤖 AI Karar & Nedensellik Motoru — {selected_ticker}")
+            st.info(f"**Genel AI Karar Sinyali:** {ai_data['action']}")
             
-            ai_card_html = f"""
-            <div class="card" style="border-left: 5px solid #63a4ff;">
-                <h3 style="margin-top:0;">🤖 AI Karar & Nedensellik Motoru — {selected_ticker}</h3>
-                <div style="font-size:15px; margin-bottom:12px;">
-                    Genel Sinyal: <span class="badge {ai_data['action_class']}" style="font-size:14px;">{ai_data['action']}</span>
-                </div>
+            st.markdown("#### ✅ Neden Alınmalı / Olumlu Gerekçeler:")
+            for pos in ai_data['positives']:
+                st.write(f"• {pos}")
                 
-                <h4 style="color:#35d07f; margin:10px 0 5px 0;">✅ Neden Alınmalı / Olumlu Gerekçeler:</h4>
-                <ul style="font-size:13px; color:#c7d2e4; padding-left:20px; margin-top:0;">
-                    {pos_items}
-                </ul>
-
-                <h4 style="color:#ff647c; margin:10px 0 5px 0;">⚠️ Neden Dikkat Edilmeli / Riskler:</h4>
-                <ul style="font-size:13px; color:#c7d2e4; padding-left:20px; margin-top:0;">
-                    {neg_items}
-                </ul>
-            </div>
-            """
-            st.markdown(ai_card_html, unsafe_allow_html=True)
+            st.markdown("#### ⚠️ Neden Dikkat Edilmeli / Riskler:")
+            for neg in ai_data['negatives']:
+                st.write(f"• {neg}")
 
         with c_right:
             st.markdown(f"""
             <div class="card">
-                <h3 style="font-size:15px; margin-top:0;">Kademeli Ara Destek & Dirençler</h3>
+                <h3 style="font-size:15px; margin-top:0;">Geniş Marjlı Destek & Dirençler</h3>
                 <table>
                     <tr><td>2. Ana Direnç (R2)</td><td><b class="red">{p_lev['R2']} TL</b></td></tr>
                     <tr><td>1. Ara Direnç (R1)</td><td><b class="red">{p_lev['R1']} TL</b></td></tr>
-                    <tr><td>Mevcut Fiyat (Pivot)</td><td><b class="yellow">{res['last_price']:.2f} TL</b></td></tr>
+                    <tr><td>Mevcut Fiyat</td><td><b class="yellow">{res['last_price']:.2f} TL</b></td></tr>
                     <tr><td>1. Ara Destek (S1)</td><td><b class="green">{p_lev['S1']} TL</b></td></tr>
                     <tr><td>2. Ana Destek (S2)</td><td><b class="green">{p_lev['S2']} TL</b></td></tr>
                 </table>
