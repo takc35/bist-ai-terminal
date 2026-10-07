@@ -117,7 +117,19 @@ def crossover_flags(df):
     out["breakout_20"] = bool(pd.notna(high_20) and last_c > high_20)
     return out
 
-def analyze(df, fundamental=86, valuation=72, sector=80, news=74, macro=65, risk=61):
+def get_signal_label(score):
+    if score >= 75:
+        return "GÜÇLÜ POZİTİF", "bgreen"
+    elif score >= 60:
+        return "POZİTİF", "bgreen"
+    elif score >= 45:
+        return "NÖTR / DENGELİ", "byellow"
+    elif score >= 30:
+        return "ZAYIF", "bred"
+    else:
+        return "GÜÇLÜ NEGATİF", "bred"
+
+def analyze(df, fundamental=75, valuation=70, sector=75, news=70, macro=65, risk=60):
     df = add_indicators(df)
     tech = technical_score(df)
     mom = momentum_score(df)
@@ -131,6 +143,8 @@ def analyze(df, fundamental=86, valuation=72, sector=80, news=74, macro=65, risk
     }
     vals = [tech, mom, trend, fundamental, valuation, sector, news, macro, risk]
     total = round(float(np.dot(vals, list(weights.values()))), 1)
+
+    signal_text, signal_class = get_signal_label(total)
 
     last_price = float(df["Close"].iloc[-1])
     prev_price = float(df["Close"].iloc[-2]) if len(df) > 1 else last_price
@@ -149,6 +163,8 @@ def analyze(df, fundamental=86, valuation=72, sector=80, news=74, macro=65, risk
         "macro": macro,
         "risk": risk,
         "total": total,
+        "signal_text": signal_text,
+        "signal_class": signal_class,
         "support": support,
         "resistance": resistance,
         "signals": crossover_flags(df)
