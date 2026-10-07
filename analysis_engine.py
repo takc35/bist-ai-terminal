@@ -40,18 +40,25 @@ def add_indicators(df):
     df["RSI14"] = rsi(c)
     df["MACD"], df["MACD_SIGNAL"], df["MACD_HIST"] = macd(c)
     df["ATR14"] = atr(df)
-    df["VOL20"] = df["Volume"].rolling(20).mean()
-    df["VOL_RATIO"] = df["Volume"] / df["VOL20"]
+    df["VOL20"] = df["Volume"].rolling(20).mean() if "Volume" in df else 1.0
+    df["VOL_RATIO"] = df["Volume"] / df["VOL20"] if "Volume" in df else 1.0
     df["ROC20"] = c.pct_change(20) * 100
     df["ROC60"] = c.pct_change(60) * 100
     df = df.bfill().ffill()
     return df
 
 def support_resistance(df, window=20):
-    x = df.tail(120)
-    support = x["Low"].rolling(window).min().dropna().iloc[-1]
-    resistance = x["High"].rolling(window).max().dropna().iloc[-1]
-    return float(support), float(resistance)
+    try:
+        x = df.tail(120)
+        sup_series = x["Low"].rolling(window, min_periods=1).min().dropna()
+        res_series = x["High"].rolling(window, min_periods=1).max().dropna()
+        
+        support = float(sup_series.iloc[-1]) if not sup_series.empty else float(df["Close"].iloc[-1] * 0.95)
+        resistance = float(res_series.iloc[-1]) if not res_series.empty else float(df["Close"].iloc[-1] * 1.05)
+        return support, resistance
+    except Exception:
+        last_c = float(df["Close"].iloc[-1])
+        return last_c * 0.95, last_c * 1.05
 
 def technical_score(df):
     x = df.iloc[-1]
@@ -100,9 +107,9 @@ def trend_score(df):
 def crossover_flags(df):
     out = {}
     for a, b, name in [(25, 50, "25_50"), (50, 200, "50_200")]:
-        A = df[f"SMA{a}"]
-        B = df[f"SMA{b}"]
-        if len(A) >= 2 and pd.notna(A.iloc[-1]) and pd.notna(B.iloc[-1]):
+        A = df[f"SMA{a}"] if f"SMA{a}" in df else pd.Series()
+        B = df[f"SMA{b}"] if f"SMA{b}" in df else pd.Series()
+        if len(A) >= 2 and len(B) >= 2 and pd.notna(A.iloc[-1]) and pd.notna(B.iloc[-1]):
             out[name+"_golden"] = bool(A.iloc[-1] > B.iloc[-1] and A.iloc[-2] <= B.iloc[-2])
             out[name+"_death"] = bool(A.iloc[-1] < B.iloc[-1] and A.iloc[-2] >= B.iloc[-2])
         else:
@@ -113,21 +120,16 @@ def crossover_flags(df):
     sma200_last = df["SMA200"].iloc[-1] if "SMA200" in df else np.nan
     out["above_200"] = bool(pd.notna(sma200_last) and last_c > sma200_last)
     
-    high_20 = df["High"].rolling(20).max().shift(1).iloc[-1]
+    high_20 = df["High"].rolling(20, min_periods=1).max().shift(1).iloc[-1] if len(df) >= 2 else last_c
     out["breakout_20"] = bool(pd.notna(high_20) and last_c > high_20)
     return out
 
 def get_signal_label(score):
-    if score >= 75:
-        return "GÜÇLÜ POZİTİF", "bgreen"
-    elif score >= 60:
-        return "POZİTİF", "bgreen"
-    elif score >= 45:
-        return "NÖTR / DENGELİ", "byellow"
-    elif score >= 30:
-        return "ZAYIF", "bred"
-    else:
-        return "GÜÇLÜ NEGATİF", "bred"
+    if score >= 75: return "GÜÇLÜ POZİTİF", "bgreen"
+    elif score >= 60: return "POZİTİF", "bgreen"
+    elif score >= 45: return "NÖTR / DENGELİ", "byellow"
+    elif score >= 30: return "ZAYIF", "bred"
+    else: return "GÜÇLÜ NEGATİF", "bred"
 
 def analyze(df, fundamental=75, valuation=70, sector=75, news=70, macro=65, risk=60):
     df = add_indicators(df)
