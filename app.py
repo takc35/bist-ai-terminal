@@ -54,7 +54,7 @@ st.markdown("""
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <div>
         <h1 style="margin:0; font-size:26px;">🧠 TUNA BIST AI TERMINAL</h1>
-        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v2.2 Pro</div>
+        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v2.3 Fix</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -71,7 +71,7 @@ if raw_df is not None:
     df = add_indicators(raw_df)
     res = analyze(raw_df)
     ai_data = res["ai_eval"]
-    fibs = res["p_levels"]
+    fibs = res["fibs"]
     
     # ÜST METRİKLER
     col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
@@ -105,7 +105,7 @@ if raw_df is not None:
         "🌐 Global & TEFAS Fonları"
     ])
 
-    # TAB 1: TEKİL HİSSE ANALİZİ VE FIBONACCI ÇİZİMLERİ
+    # TAB 1: TEKİL HİSSE ANALİZİ VE GÜVENLİ FIBONACCI ÇİZİMLERİ
     with tab1:
         c_left, c_right = st.columns([1.6, 1])
         with c_left:
@@ -118,12 +118,17 @@ if raw_df is not None:
             if 'SMA200' in df:
                 fig.add_trace(go.Scatter(x=df['Date'], y=df['SMA200'], mode='lines', name='SMA 200', line=dict(color='#35d07f', width=1.5)))
             
-            # FIBONACCI SEVİYE ÇİZGİLERİ
-            fig.add_hline(y=fibs['FIB_100'], line_dash="dash", line_color="#ff4d4d", annotation_text=f"%0.0 Zirve: {fibs['FIB_100']}", annotation_position="top right")
-            fig.add_hline(y=fibs['FIB_618'], line_dash="dash", line_color="#f6c85f", annotation_text=f"%38.2 Fibo: {fibs['FIB_618']}", annotation_position="top right")
-            fig.add_hline(y=fibs['FIB_500'], line_dash="solid", line_color="#ffffff", annotation_text=f"%50.0 Denge: {fibs['FIB_500']}", annotation_position="top left")
-            fig.add_hline(y=fibs['FIB_382'], line_dash="dash", line_color="#35d07f", annotation_text=f"%61.8 Altın Oran: {fibs['FIB_382']}", annotation_position="bottom right")
-            fig.add_hline(y=fibs['FIB_000'], line_dash="dash", line_color="#63a4ff", annotation_text=f"%100.0 Dip: {fibs['FIB_000']}", annotation_position="bottom right")
+            # GÜVENLİ FIBONACCI ÇİZGİLERİ
+            if "FIB_100" in fibs:
+                fig.add_hline(y=fibs['FIB_100'], line_dash="dash", line_color="#ff4d4d", annotation_text=f"%0.0 Zirve: {fibs['FIB_100']}", annotation_position="top right")
+            if "FIB_618" in fibs:
+                fig.add_hline(y=fibs['FIB_618'], line_dash="dash", line_color="#f6c85f", annotation_text=f"%38.2 Fibo: {fibs['FIB_618']}", annotation_position="top right")
+            if "FIB_500" in fibs:
+                fig.add_hline(y=fibs['FIB_500'], line_dash="solid", line_color="#ffffff", annotation_text=f"%50.0 Denge: {fibs['FIB_500']}", annotation_position="top left")
+            if "FIB_382" in fibs:
+                fig.add_hline(y=fibs['FIB_382'], line_dash="dash", line_color="#35d07f", annotation_text=f"%61.8 Altın Oran: {fibs['FIB_382']}", annotation_position="bottom right")
+            if "FIB_000" in fibs:
+                fig.add_hline(y=fibs['FIB_000'], line_dash="dash", line_color="#63a4ff", annotation_text=f"%100.0 Dip: {fibs['FIB_000']}", annotation_position="bottom right")
             
             fig.update_layout(template="plotly_dark", height=380, margin=dict(l=10, r=10, t=10, b=10))
             st.plotly_chart(fig, use_container_width=True)
@@ -145,13 +150,13 @@ if raw_df is not None:
             <div class="card">
                 <h3 style="font-size:15px; margin-top:0;">Auto-Fibonacci Seviyeleri</h3>
                 <table>
-                    <tr><td>%0.0 Zirve Seviyesi</td><td><b class="red">{fibs['FIB_100']} TL</b></td></tr>
-                    <tr><td>%23.6 Fibonacci</td><td><b>{fibs['FIB_786']} TL</b></td></tr>
-                    <tr><td>%38.2 Fibonacci</td><td><b class="yellow">{fibs['FIB_618']} TL</b></td></tr>
-                    <tr><td>%50.0 Denge Noktası</td><td><b class="blue">{fibs['FIB_500']} TL</b></td></tr>
-                    <tr><td>%61.8 Altın Oran Desteği</td><td><b class="green">{fibs['FIB_382']} TL</b></td></tr>
-                    <tr><td>%78.6 Fibonacci Desteği</td><td><b>{fibs['FIB_236']} TL</b></td></tr>
-                    <tr><td>%100.0 Dip Seviyesi</td><td><b class="green">{fibs['FIB_000']} TL</b></td></tr>
+                    <tr><td>%0.0 Zirve Seviyesi</td><td><b class="red">{fibs.get('FIB_100', 0)} TL</b></td></tr>
+                    <tr><td>%23.6 Fibonacci</td><td><b>{fibs.get('FIB_786', 0)} TL</b></td></tr>
+                    <tr><td>%38.2 Fibonacci</td><td><b class="yellow">{fibs.get('FIB_618', 0)} TL</b></td></tr>
+                    <tr><td>%50.0 Denge Noktası</td><td><b class="blue">{fibs.get('FIB_500', 0)} TL</b></td></tr>
+                    <tr><td>%61.8 Altın Oran Desteği</td><td><b class="green">{fibs.get('FIB_382', 0)} TL</b></td></tr>
+                    <tr><td>%78.6 Fibonacci Desteği</td><td><b>{fibs.get('FIB_236', 0)} TL</b></td></tr>
+                    <tr><td>%100.0 Dip Seviyesi</td><td><b class="green">{fibs.get('FIB_000', 0)} TL</b></td></tr>
                 </table>
             </div>
             """, unsafe_allow_html=True)
