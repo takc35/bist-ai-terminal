@@ -58,12 +58,18 @@ st.markdown("""
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <div>
         <h1 style="margin:0; font-size:26px;">🧠 TUNA BIST AI TERMINAL</h1>
-        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v1.3</div>
+        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v1.4</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-selected_ticker = st.text_input("🔍 Hisse veya Varlık Kodu Seçiniz (Örn: TUPRS, THYAO, GRAM_ALTIN, NVDA, AAPL):", value="TUPRS").upper()
+# Session state hisse takibi
+if "selected_ticker" not in st.session_state:
+    st.session_state["selected_ticker"] = "TUPRS"
+
+selected_ticker = st.text_input("🔍 Hisse veya Varlık Kodu Seçiniz (Örn: TUPRS, THYAO, GRAM_ALTIN, ONS_ALTIN, NVDA):", value=st.session_state["selected_ticker"]).upper()
+st.session_state["selected_ticker"] = selected_ticker
+
 raw_df = fetch_bist_ticker(selected_ticker)
 
 if raw_df is not None:
@@ -101,7 +107,7 @@ if raw_df is not None:
         "🌐 Emtia, ABD Hisseleri & TEFAS Fonları"
     ])
 
-    # TAB 1: TEKİL HİSSE & GRAFİK ANALİZİ (DESTEK DİRENÇLİ FULL GRAFİK)
+    # TAB 1: TEKİL HİSSE & GRAFİK ANALİZİ
     with tab1:
         c_left, c_right = st.columns([1.6, 1])
         with c_left:
@@ -176,35 +182,76 @@ if raw_df is not None:
             </div>
             """, unsafe_allow_html=True)
 
-    # TAB 2: MODEL PORTFÖYLER
+    # TAB 2: MODEL PORTFÖYLER VE ÖZGÜN SEÇİM NEDENLERİ
     with tab2:
         st.subheader("💼 AI Model Portföyler ve Güncel Gerekçeler")
-        portfolio_type = st.selectbox("Model Portföy Türünü Seçiniz:", [
-            "BIST 100 — Haftalık Model Portföy (Güncelleme: Pazartesi)",
-            "BIST 100 — Aylık Model Portföy (Güncelleme: Ayın 1'i)",
-            "BIST TÜM — Haftalık Model Portföy (Güncelleme: Pazartesi)",
-            "BIST TÜM — Aylık Model Portföy (Güncelleme: Ayın 1'i)"
-        ])
+        st.caption("Pazartesi güncellenen Haftalık ve Her ayın 1'inde güncellenen Aylık Model Portföyler (5 Hisse / %20 Ağırlık):")
+
+        portfolio_type = st.selectbox(
+            "Model Portföy Türünü Seçiniz:",
+            [
+                "BIST 100 — Haftalık Model Portföy (Güncelleme: Pazartesi)",
+                "BIST 100 — Aylık Model Portföy (Güncelleme: Ayın 1'i)",
+                "BIST TÜM — Haftalık Model Portföy (Güncelleme: Pazartesi)",
+                "BIST TÜM — Aylık Model Portföy (Güncelleme: Ayın 1'i)"
+            ]
+        )
+
         base_portfolios = {
             "BIST 100 — Haftalık Model Portföy (Güncelleme: Pazartesi)": [
-                {"hisse": "TAVHL", "ad": "TAV Havalimanları Holding", "durum": "Korundu", "giris": 260.00, "agirlik": "%20.0", "baslik": "Kârlılık trendi sürüyor", "neden": "Faaliyet kâr marjında iyileşme var."},
-                {"hisse": "PETKM", "ad": "Petkim Petrokimya Holding", "durum": "Korundu", "giris": 18.60, "agirlik": "%20.0", "baslik": "Bilanço gücü korunuyor", "neden": "Nakit akışı üst seviyede."},
-                {"hisse": "KORDS", "ad": "Kordsa Teknik Tekstil", "durum": "Listeye Girdi", "giris": 2.80, "agirlik": "%20.0", "baslik": "Kâr büyümesi eşiği geçti", "neden": "Net kâr ve momentum ivmelendi."},
-                {"hisse": "THYAO", "ad": "Türk Hava Yolları", "durum": "Korundu", "giris": 288.50, "agirlik": "%20.0", "baslik": "Doluluk oranları yüksek", "neden": "RSI ve hacim trendi destekliyor."},
-                {"hisse": "AKBNK", "ad": "Akbank T.A.Ş.", "durum": "Korundu", "giris": 53.20, "agirlik": "%20.0", "baslik": "Net faiz marjı pozitif", "neden": "Göreceli gücü yüksek."}
+                {"hisse": "TAVHL", "ad": "TAV Havalimanları Holding", "durum": "Korundu", "giris": 260.00, "agirlik": "%20.0", "baslik": "Kârlılık trendi sürüyor", "neden": "Faaliyet kâr marjında art arda çeyreklerde iyileşme gösteriyor."},
+                {"hisse": "PETKM", "ad": "Petkim Petrokimya Holding", "durum": "Korundu", "giris": 18.60, "agirlik": "%20.0", "baslik": "Bilanço gücü korunuyor", "neden": "Borçluluk ve nakit akışı kriterlerinde evrenin üst yarısında kalmayı sürdürüyor."},
+                {"hisse": "KORDS", "ad": "Kordsa Teknik Tekstil", "durum": "Listeye Girdi", "giris": 2.80, "agirlik": "%20.0", "baslik": "Kâr büyümesi ve momentum eşiği geçti", "neden": "Net kâr büyümesi ve 6 aylık fiyat momentumu kriterlerinde medyanın üzerine çıktı."},
+                {"hisse": "THYAO", "ad": "Türk Hava Yolları", "durum": "Korundu", "giris": 288.50, "agirlik": "%20.0", "baslik": "Yolcu ve doluluk oranları destekliyor", "neden": "RSI ve hacim tarafındaki güçlenme ile orta vadeli trend desteği güçlü."},
+                {"hisse": "AKBNK", "ad": "Akbank T.A.Ş.", "durum": "Korundu", "giris": 53.20, "agirlik": "%20.0", "baslik": "Net faiz marjında toparlanma teyidi", "neden": "Bankacılık sektör endeksine göre göreceli gücü yüksek kalmayı sürdürüyor."}
+            ],
+            "BIST 100 — Aylık Model Portföy (Güncelleme: Ayın 1'i)": [
+                {"hisse": "TUPRS", "ad": "Tüpraş Rafineri", "durum": "Korundu", "giris": 378.00, "agirlik": "%20.0", "baslik": "Rafineri marjları güçlü", "neden": "FAVÖK kârlılığı ve güçlü nakit akışı aylık listedeki yerini korumasını sağlıyor."},
+                {"hisse": "ASELS", "ad": "Aselsan Elektronik", "durum": "Listeye Girdi", "giris": 60.50, "agirlik": "%20.0", "baslik": "Yeni sözleşme akışları ivme kazandırdı", "neden": "KAP duyuruları ve backlog sipariş artışı aylık portföye dahil edilmesini sağladı."},
+                {"hisse": "BIMAS", "ad": "BİM Birleşik Mağazalar", "durum": "Korundu", "giris": 480.00, "agirlik": "%20.0", "baslik": "Defansif yapısıyla nakit yaratmaya devam ediyor", "neden": "İç talep duyarlılığı ve yüksek ROE oranıyla listeyi destekliyor."},
+                {"hisse": "SAHOL", "ad": "Sabancı Holding", "durum": "Korundu", "giris": 86.50, "agirlik": "%20.0", "baslik": "Göreceli iskonto avantajı sürüyor", "neden": "Net aktif değerine göre yüksek iskonto korunduğu için listede tutuluyor."},
+                {"hisse": "EREGL", "ad": "Ereğli Demir Çelik", "durum": "Listeye Girdi", "giris": 36.80, "agirlik": "%20.0", "baslik": "Cevher ve çelik marjlarında toparlanma", "neden": "Sektörel dip oluşumu ve hacim toparlanmasıyla aylık listeye eklendi."}
+            ],
+            "BIST TÜM — Haftalık Model Portföy (Güncelleme: Pazartesi)": [
+                {"hisse": "CLEBI", "ad": "Çelebi Hava Servisi", "durum": "Listeye Girdi", "giris": 1120.00, "agirlik": "%20.0", "baslik": "Havacılık hizmetlerinde güçlü momentum", "neden": "Haftalık RSI ve hacim anomalisi BIST TÜM evreninde eşiği aştı."},
+                {"hisse": "SDTTR", "ad": "SDT Uzay ve Savunma", "durum": "Korundu", "giris": 275.00, "agirlik": "%20.0", "baslik": "Savunma segmentinde yüksek kârlılık", "neden": "Yüksek marj yapısı ve hacim ivmesi korunduğu için listede kalıyor."},
+                {"hisse": "ALARK", "ad": "Alarko Holding", "durum": "Korundu", "giris": 104.50, "agirlik": "%20.0", "baslik": "Enerji ve tarım yatırımları nakit üretiyor", "neden": "Kısa vadeli teknik indikatörler pozitif bölgede kalmayı sürdürüyor."},
+                {"hisse": "ASTOR", "ad": "Astor Enerji", "durum": "Listeye Girdi", "giris": 93.80, "agirlik": "%20.0", "baslik": "İhracat siparişleri güçleniyor", "neden": "Yurt dışı teslimat ivmesiyle haftalık radarda üst sıraya yükseldi."},
+                {"hisse": "PGSUS", "ad": "Pegasus Hava Taşımacılığı", "durum": "Korundu", "giris": 230.00, "agirlik": "%20.0", "baslik": "Yolcu başı yan gelir artışı", "neden": "Haftalık momentum ve doluluk oranları listedeki yerini korumasını sağladı."}
+            ],
+            "BIST TÜM — Aylık Model Portföy (Güncelleme: Ayın 1'i)": [
+                {"hisse": "KONTR", "ad": "Kontrolmatik Teknoloji", "durum": "Listeye Girdi", "giris": 57.50, "agirlik": "%20.0", "baslik": "Yeni enerji depolama projeleri", "neden": "KAP açıklamaları ve uzun vadeli backlog büyümesiyle eklendi."},
+                {"hisse": "OTKAR", "ad": "Otokar Otomotiv", "durum": "Korundu", "giris": 485.00, "agirlik": "%20.0", "baslik": "Zırhlı araç teslimatları bilançoyu destekliyor", "neden": "İhracat oranı yüksekliği ve kârlılık kalitesiyle kalıyor."},
+                {"hisse": "DOHOL", "ad": "Doğan Holding", "durum": "Korundu", "giris": 14.10, "agirlik": "%20.0", "baslik": "Solo net nakit pozisyonu güçlü", "neden": "Çarpan bazında ucuzluk ve defansif yapısıyla aylık listede tutuluyor."},
+                {"hisse": "YAS", "ad": "Yapı Kredi Portföy Koç İştirak", "durum": "Korundu", "giris": 81.50, "agirlik": "%20.0", "baslik": "İştirak kârlılıkları yüksek", "neden": "Holding bileşenlerinin kârlılık katkısı aylık seçimi destekliyor."},
+                {"hisse": "SISE", "ad": "Şişecam", "durum": "Listeye Girdi", "giris": 44.20, "agirlik": "%20.0", "baslik": "Küresel cam marjlarında dip geçildi", "neden": "Uzun vadeli değerleme cazibesiyle BIST TÜM aylık modeline eklendi."}
             ]
         }
-        curr_list = base_portfolios.get(portfolio_type, base_portfolios["BIST 100 — Haftalık Model Portföy (Güncelleme: Pazartesi)"])
+
+        curr_list = base_portfolios.get(portfolio_type, [])
+
         for item in curr_list:
             t_data = fetch_bist_ticker(item["hisse"])
             last_p = float(t_data["Close"].iloc[-1]) if t_data is not None else item["giris"]
             ret_pct = ((last_p - item["giris"]) / item["giris"]) * 100
             ret_str = f"+%{ret_pct:.2f}" if ret_pct >= 0 else f"-%{abs(ret_pct):.2f}"
+            ret_class = "green" if ret_pct >= 0 else "red"
+            status_color = "bgreen" if item["durum"] in ["Korundu", "Listeye Girdi"] else "bred"
+            
             st.markdown(f"""
             <div class="card" style="margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div><b style="font-size:16px; color:#63a4ff;">{item['hisse']}</b> — <span style="font-size:13px; color:#9ba9bf;">{item['ad']}</span></div>
-                    <div style="font-size:13px;">Giriş: <b>{item['giris']:.2f} TL</b> | Canlı: <b>{last_p:.2f} TL</b> | Getiri: <b class="green">{ret_str}</b></div>
+                    <div>
+                        <b style="font-size:16px; color:#63a4ff;">{item['hisse']}</b> — <span style="font-size:13px; color:#9ba9bf;">{item['ad']}</span>
+                        <span class="badge {status_color}" style="margin-left:10px;">{item['durum']}</span>
+                    </div>
+                    <div style="font-size:13px;">
+                        Giriş: <b>{item['giris']:.2f} TL</b> | Canlı Son: <b>{last_p:.2f} TL</b> | Ağırlık: <b>{item['agirlik']}</b> | Getiri: <b class="{ret_class}">{ret_str}</b>
+                    </div>
+                </div>
+                <div style="margin-top:10px; border-top:1px solid #26344e; padding-top:8px;">
+                    <b style="font-size:13px; color:#eef3fb;">{item['baslik']}</b>
+                    <p style="font-size:12px; color:#9ba9bf; margin:4px 0 0 0;">{item['neden']}</p>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -216,21 +263,54 @@ if raw_df is not None:
         y2.markdown(f'<div class="card"><h4>📈 Orta Vade</h4><p>Hedef: <b class="green">{res["last_price"]*1.22:.2f}</b></p></div>', unsafe_allow_html=True)
         y3.markdown(f'<div class="card"><h4>🚀 Uzun Vade</h4><p>Hedef: <b class="green">{res["last_price"]*1.45:.2f}</b></p></div>', unsafe_allow_html=True)
 
+    # TAB 4: TAM ÇALIŞAN SEKTÖREL RADAR & TOP 10 TARAMASI
     with tab4:
-        st.subheader("🔥 BIST Sektörel Radar")
-        if st.button("Taramayı Çalıştır"):
-            st.info("Sektör hisseleri taranıyor...")
+        st.subheader("🔥 BIST Sektörel En İyi 10 Hisse Taraması")
+        sector_choice = st.selectbox("Sektör Seçiniz:", ["Genel BIST 100", "Bankacılık", "Ulaştırma", "Savunma Sanayi", "Holding / Yatırım", "Enerji / Petrol"])
+        
+        sector_stocks = {
+            "Genel BIST 100": ["TUPRS", "THYAO", "AKBNK", "GARAN", "ASELS", "EREGL", "SAHOL", "KCHOL", "BIMAS", "SISE"],
+            "Bankacılık": ["AKBNK", "GARAN", "ISCTR", "YKBNK", "HALKB", "VAKBN"],
+            "Ulaştırma": ["THYAO", "PGSUS", "CLEBI", "TAVHL"],
+            "Savunma Sanayi": ["ASELS", "SDTTR", "ALTNY"],
+            "Holding / Yatırım": ["SAHOL", "KCHOL", "ALARK", "DOHOL"],
+            "Enerji / Petrol": ["TUPRS", "PETKM", "ASTOR", "SASA"]
+        }
+        target_list = sector_stocks.get(sector_choice, sector_stocks["Genel BIST 100"])
+        
+        scan_results = []
+        p_bar = st.progress(0)
+        for idx, ticker in enumerate(target_list):
+            t_df = fetch_bist_ticker(ticker)
+            if t_df is not None:
+                a = analyze(t_df)
+                scan_results.append({
+                    "Hisse": ticker,
+                    "Genel AI Skor": a["total"],
+                    "Sinyal / Görünüm": a["signal_text"],
+                    "Son Fiyat": f"{a['last_price']:.2f} TL",
+                    "Teknik Skor": a["technical"],
+                    "Momentum": a["momentum"],
+                    "200G Trend": "🟢 Üzerinde" if a["signals"]["above_200"] else "🔴 Altında"
+                })
+            p_bar.progress((idx + 1) / len(target_list))
+        
+        if scan_results:
+            res_df = pd.DataFrame(scan_results).sort_values("Genel AI Skor", ascending=False).reset_index(drop=True)
+            res_df.index = res_df.index + 1
+            res_df.index.name = "Sıra"
+            st.table(res_df)
 
     with tab5:
         st.subheader("🇹🇷 Günlük Haber Akışı")
         for n in get_daily_news():
             st.success(f"{n['title']} ({n['category']})")
 
-    # TAB 6: GLOBAL PİYASALAR & GERÇEK TEFAS FON VERİTABANI
+    # TAB 6: EMTİA/DÖVİZ KISAYOL BUTONLARI & GERÇEK TEFAS FONLARI
     with tab6:
         st.subheader("🌐 Döviz, Emtia, ABD Hisseleri ve TEFAS Fonları")
         
-        # 1. Döviz & Emtia Kartları
+        # 1. Döviz & Emtia Kartları ve Tıklanabilir Grafiğe Geçiş Butonları
         st.markdown("#### 🟡 Döviz & Emtialar")
         m_data = get_market_overview()
         
@@ -251,6 +331,28 @@ if raw_df is not None:
             """, unsafe_allow_html=True)
             col_idx += 1
 
+        st.markdown("**📈 Canlı Grafik İnceleme Kısayolları (Tıkla ve Tekil Analizde Grafik Aç):**")
+        b_col1, b_col2, b_col3, b_col4, b_col5, b_col6 = st.columns(6)
+        
+        if b_col1.button("Gram Altın 📊"):
+            st.session_state["selected_ticker"] = "GRAM_ALTIN"
+            st.rerun()
+        if b_col2.button("Ons Altın 🪙"):
+            st.session_state["selected_ticker"] = "ONS_ALTIN"
+            st.rerun()
+        if b_col3.button("Gram Gümüş 🥈"):
+            st.session_state["selected_ticker"] = "GRAM_GUMUS"
+            st.rerun()
+        if b_col4.button("Ons Gümüş 💎"):
+            st.session_state["selected_ticker"] = "ONS_GUMUS"
+            st.rerun()
+        if b_col5.button("Brent Petrol 🛢️"):
+            st.session_state["selected_ticker"] = "PETROL"
+            st.rerun()
+        if b_col6.button("Dolar/TL 💵"):
+            st.session_state["selected_ticker"] = "USDTRY"
+            st.rerun()
+
         st.divider()
 
         # 2. ABD Hisseleri
@@ -270,7 +372,7 @@ if raw_df is not None:
 
         st.divider()
 
-        # 3. GERÇEK KURUMSAL TEFAS YATIRIM FONU LİSTESİ (FON66 SAÇMALIĞI TAMAMEN KALDIRILDI)
+        # 3. GERÇEK TEFAS FON LİSTESİ
         st.markdown("#### 📊 TEFAS Yatırım Fonları & Detaylı İnceleme (Kurumsal Gerçek Liste)")
         
         tefas_real_db = {
