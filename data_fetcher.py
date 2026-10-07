@@ -3,8 +3,7 @@ import yfinance as yf
 
 US_100_TICKERS = [
     "AAPL", "NVDA", "MSFT", "AMZN", "GOOGL", "META", "TSLA", "BRK-B", "AVGO", "LLY",
-    "JPM", "WMT", "V", "XOM", "UNH", "MA", "PG", "COST", "ORCL", "HD",
-    "JNJ", "BAC", "ABBV", "NFLX", "KO", "CRM", "MRK", "CVX", "WFC", "AMD"
+    "JPM", "WMT", "V", "XOM", "UNH", "MA", "PG", "COST", "ORCL", "HD"
 ]
 
 def fetch_bist_ticker(ticker_symbol):
@@ -47,7 +46,7 @@ def fetch_bist_ticker(ticker_symbol):
 
 def get_market_overview():
     """
-    Döviz & Emtia Canlı Verileri (Brent Petrol 89.20$+ Anlık Canlı Fiyat Entegrasyonu)
+    Brent Petrol ve Emtia Canlı Verileri
     """
     overview = {}
     
@@ -61,12 +60,16 @@ def get_market_overview():
     eur_prev = float(eur_df["Close"].iloc[-2]) if eur_df is not None else 37.75
     overview["EUR/TL"] = {"price": eur_p, "change": ((eur_p-eur_prev)/eur_prev)*100, "unit": "₺", "code": "EURTRY"}
 
-    # Brent Petrol Gerçek Canlı Fiyat
+    # Brent Petrol Canlı Verisi (yfinance BZ=F)
     petrol_df = fetch_bist_ticker("PETROL")
-    pet_p = float(petrol_df["Close"].iloc[-1]) if petrol_df is not None else 89.20
-    pet_prev = float(petrol_df["Close"].iloc[-2]) if petrol_df is not None else 88.50
-    if pet_p < 82.0: pet_p = 89.20
-    overview["Brent Petrol"] = {"price": pet_p, "change": ((pet_p-pet_prev)/pet_prev)*100 if pet_prev!=0 else 0.85, "unit": "$", "code": "PETROL"}
+    if petrol_df is not None and len(petrol_df) >= 2:
+        pet_p = float(petrol_df["Close"].iloc[-1])
+        pet_prev = float(petrol_df["Close"].iloc[-2])
+        pet_chg = ((pet_p - pet_prev) / pet_prev) * 100
+    else:
+        pet_p, pet_chg = 78.40, 0.45
+        
+    overview["Brent Petrol"] = {"price": pet_p, "change": pet_chg, "unit": "$", "code": "PETROL"}
 
     gold_df = fetch_bist_ticker("ONS_ALTIN")
     ons_p = float(gold_df["Close"].iloc[-1]) if gold_df is not None else 2650.0
