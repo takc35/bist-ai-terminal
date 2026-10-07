@@ -15,7 +15,7 @@ def get_daily_news():
             "score_bonus": 6.0
         },
         {
-            "title": "ASELSAN (ASELS) — 145 Milyon Dolar Tutarında Yeni Savunma Sözleşmesi Imzalandı",
+            "title": "ASELSAN (ASELS) — 145 Milyon Dolar Tutarında Yeni Savunma Sözleşmesi İmzalandı",
             "category": "KAP / Yeni İş İlişkisi",
             "impact": "YÜKSEK POZİTİF",
             "desc": "Yurt dışı bir müşteri ile radar ve haberleşme sistemleri tedarikine ilişkin uluslararası sözleşme imzalandığı duyuruldu.",
@@ -34,28 +34,5 @@ def get_daily_news():
             "impact": "POZİTİF",
             "desc": "Mevduat maliyetlerindeki gevşeme ile birlikte bankacılık sektöründe net faiz marjlarının 3. çeyrekten itibaren toparlanma sürecine girdiği belirtildi.",
             "score_bonus": 5.5
-        }
-    ]ef get_daily_news():
-    return [
-        {
-            "title": "Eylül Enflasyonu Beklentilerin Altında Gerçekleşti",
-            "category": "MAKRO",
-            "impact": "POZİTİF",
-            "score_bonus": +8,
-            "desc": "TCMB faiz indirimi beklentileri güçlendi. Bankacılık, GYO ve sanayi şirketleri pozitif etkileniyor."
-        },
-        {
-            "title": "SPK Piyasa Düzenleme ve İnceleme Kararları",
-            "category": "DÜZENLEME",
-            "impact": "NÖTR",
-            "score_bonus": 0,
-            "desc": "Piyasa genelinde volatiliteyi kontrol altında tutmaya yönelik denetim adımları sürdürülüyor."
-        },
-        {
-            "title": "Küresel Petrol Fiyatlarında Dengelenme",
-            "category": "SEKTÖR",
-            "impact": "POZİTİF",
-            "score_bonus": +5,
-            "desc": "Rafineri marjları üzerindeki baskı azalırken TUPRS gibi üreticiler için marj görünümü stabil kalıyor."
         }
     ]
