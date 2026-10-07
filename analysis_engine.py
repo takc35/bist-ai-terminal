@@ -34,22 +34,19 @@ def add_indicators(df):
     return df
 
 def fibonacci_levels(df):
-    """
-    Son 90 Barın En Yüksek ve En Düşük Seviyelerine Göre Otomatik Fibonacci Düzeltmesi
-    """
     recent = df.tail(90)
     high = float(recent["High"].max())
     low = float(recent["Low"].min())
     diff = high - low
     
     return {
-        "FIB_100": round(high, 2),                  # %0 Zirve
-        "FIB_786": round(high - diff * 0.214, 2),   # %23.6
-        "FIB_618": round(high - diff * 0.382, 2),   # %38.2
-        "FIB_500": round(high - diff * 0.500, 2),   # %50.0 Denge
-        "FIB_382": round(high - diff * 0.618, 2),   # %61.8 Altın Oran
-        "FIB_236": round(high - diff * 0.786, 2),   # %78.6
-        "FIB_000": round(low, 2)                    # %100 Dip
+        "FIB_100": round(high, 2),
+        "FIB_786": round(high - diff * 0.214, 2),
+        "FIB_618": round(high - diff * 0.382, 2),
+        "FIB_500": round(high - diff * 0.500, 2),
+        "FIB_382": round(high - diff * 0.618, 2),
+        "FIB_236": round(high - diff * 0.786, 2),
+        "FIB_000": round(low, 2)
     }
 
 def calculate_dynamic_score(df):
