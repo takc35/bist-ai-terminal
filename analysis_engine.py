@@ -33,34 +33,65 @@ def add_indicators(df):
     df = df.bfill().ffill()
     return df
 
-def support_resistance(df):
+def fibonacci_levels(df):
     """
-    Genis Marjli Majör Destek ve Direnç Seviyeleri (Arasi Acik)
+    Son 90 Barın En Yüksek ve En Düşük Seviyelerine Göre Otomatik Fibonacci Düzeltmesi
     """
-    last_p = float(df["Close"].iloc[-1])
-    recent_df = df.tail(60)
-    
-    high_60 = float(recent_df["High"].max())
-    low_60 = float(recent_df["Low"].min())
-    
-    # Geniş Marjlı Seviyeler
-    r2 = round(max(high_60 * 1.05, last_p * 1.15), 2)
-    r1 = round(last_p + (r2 - last_p) * 0.5, 2)
-    s1 = round(last_p - (last_p - min(low_60 * 0.95, last_p * 0.85)) * 0.5, 2)
-    s2 = round(min(low_60 * 0.95, last_p * 0.85), 2)
+    recent = df.tail(90)
+    high = float(recent["High"].max())
+    low = float(recent["Low"].min())
+    diff = high - low
     
     return {
-        "PP": round(last_p, 2),
-        "R1": r1,
-        "R2": r2,
-        "S1": s1,
-        "S2": s2
+        "FIB_100": round(high, 2),        # %0 Zirve
+        "FIB_786": round(high - diff * 0.214, 2), # %23.6
+        "FIB_618": round(high - diff * 0.382, 2), # %38.2
+        "FIB_500": round(high - diff * 0.500, 2), # %50.0 Denge
+        "FIB_382": round(high - diff * 0.618, 2), # %61.8 Altın Oran
+        "FIB_236": round(high - diff * 0.786, 2), # %78.6
+        "FIB_000": round(low, 2)          # %100 Dip
     }
 
+def calculate_dynamic_score(df):
+    """
+    Gerçek Teknik Verilere Göre Dinamik Skorlama (0-100)
+    """
+    last_p = float(df["Close"].iloc[-1])
+    score = 50.0
+    
+    sma50 = df["SMA50"].iloc[-1] if "SMA50" in df else None
+    sma200 = df["SMA200"].iloc[-1] if "SMA200" in df else None
+    rsi_val = df["RSI14"].iloc[-1] if "RSI14" in df else 50
+    macd_val = df["MACD"].iloc[-1] if "MACD" in df else 0
+    macd_sig = df["MACD_SIGNAL"].iloc[-1] if "MACD_SIGNAL" in df else 0
+    
+    # 200 Günlük Trend
+    if sma200:
+        if last_p > sma200: score += 15
+        else: score -= 15
+        
+    # 50 Günlük Trend
+    if sma50:
+        if last_p > sma50: score += 10
+        else: score -= 10
+        
+    # RSI Durumu
+    if 45 <= rsi_val <= 65:
+        score += 10
+    elif rsi_val > 70:
+        score -= 15  # Aşırı alım / Düzeltme riski
+    elif rsi_val < 30:
+        score += 5   # Aşırı satış / Tepki alımı fırsatı
+    else:
+        score -= 5
+        
+    # MACD Sinyali
+    if macd_val > macd_sig: score += 10
+    else: score -= 10
+    
+    return round(float(np.clip(score, 10.0, 95.0)), 1)
+
 def get_ai_reasoning(df, total_score):
-    """
-    Dinamik Al/Sat gerekçeli AI yorum motoru
-    """
     last_p = float(df["Close"].iloc[-1])
     positives = []
     negatives = []
@@ -70,40 +101,42 @@ def get_ai_reasoning(df, total_score):
     rsi_val = df["RSI14"].iloc[-1] if "RSI14" in df else 50
     
     if sma200 and last_p > sma200:
-        positives.append("Fiyat 200 günlük ana ortalamanın (SMA200) üzerinde; uzun vadeli yükseliş trendi korunuyor.")
+        positives.append("Fiyat 200 günlük ana ortalamanın (SMA200) üzerinde; uzun vadeli boğa trendi korunuyor.")
     else:
-        negatives.append("Fiyat 200 günlük ortalamanın altında; uzun vadeli teknik baskı sürüyor.")
+        negatives.append("Fiyat 200 günlük ortalamanın altında; uzun vadeli teknik baskı devam ediyor.")
         
     if sma50 and last_p > sma50:
         positives.append("Kısa-orta vadeli 50 günlük hareketli ortalama desteği üzerinde pozitif görünüm var.")
     else:
-        negatives.append("50 günlük ortalamanın altında kalması kısa vadeli ivme kaybına işaret ediyor.")
+        negatives.append("50 günlük ortalamanın altına sarkması kısa vadeli ivme kaybına işaret ediyor.")
         
     if 45 <= rsi_val <= 65:
-        positives.append(f"RSI ({rsi_val:.1f}) dengeli bölgede; yükseliş marjı bulunuyor.")
+        positives.append(f"RSI ({rsi_val:.1f}) dengeli bölgede; alım gücü korunuyor.")
     elif rsi_val > 70:
-        negatives.append(f"RSI ({rsi_val:.1f}) aşırı alım bölgesinde; kâr satışı riski artıyor.")
+        negatives.append(f"RSI ({rsi_val:.1f}) aşırı alım bölgesinde; kâr satışı riski yüksek.")
     elif rsi_val < 35:
         positives.append(f"RSI ({rsi_val:.1f}) dip seviyelerde; tepki alımı olasılığı güçleniyor.")
 
-    p_levels = support_resistance(df)
-    positives.append(f"İlk majör direnç hedefi olan {p_levels['R1']} TL seviyesine kadar yükseliş potansiyeli mevcut.")
-
-    if total_score >= 70:
+    fibs = fibonacci_levels(df)
+    
+    # Gerçekçi ve Çeşitlendirilmiş Sinyal Karar Mekanizması
+    if total_score >= 75:
         action, action_class = "GÜÇLÜ AL (POZİTİF)", "bgreen"
-    elif total_score >= 55:
+    elif total_score >= 60:
         action, action_class = "AL / KADEMELİ TOPLA", "bgreen"
     elif total_score >= 45:
         action, action_class = "TUT / NEUTRAL", "byellow"
-    else:
+    elif total_score >= 30:
         action, action_class = "SAT / BEKLEMEDE KAL", "bred"
+    else:
+        action, action_class = "GÜÇLÜ SAT (ZAYIF)", "bred"
 
     return {
         "action": action,
         "action_class": action_class,
-        "positives": positives,
+        "positives": positives if positives else ["Kısa vadeli teknik göstergeler nötr seyrediyor."],
         "negatives": negatives if negatives else ["Belirgin bir kısa vadeli teknik risk faktörü tespit edilmedi."],
-        "p_levels": p_levels
+        "fibs": fibs
     }
 
 def analyze(df):
@@ -112,9 +145,12 @@ def analyze(df):
     prev_p = float(df["Close"].iloc[-2]) if len(df) > 1 else last_p
     change_pct = ((last_p - prev_p) / prev_p) * 100 if prev_p != 0 else 0.0
     
-    tech, mom, trend, total = 65.0, 70.0, 75.0, 68.5
+    total = calculate_dynamic_score(df)
+    tech = total
+    mom = round(total * 0.9, 1)
+    trend = round(total * 1.05, 1) if total > 50 else round(total * 0.8, 1)
     
-    p_levels = support_resistance(df)
+    fibs = fibonacci_levels(df)
     ai_eval = get_ai_reasoning(df, total)
 
     return {
@@ -123,17 +159,17 @@ def analyze(df):
         "technical": tech,
         "momentum": mom,
         "trend": trend,
-        "fundamental": 75.0,
-        "valuation": 70.0,
-        "sector": 75.0,
-        "news": 70.0,
+        "fundamental": 70.0,
+        "valuation": 65.0,
+        "sector": 70.0,
+        "news": 65.0,
         "risk": 60.0,
         "total": total,
         "signal_text": ai_eval["action"],
         "signal_class": ai_eval["action_class"],
-        "support": p_levels["S1"],
-        "resistance": p_levels["R1"],
-        "p_levels": p_levels,
+        "support": fibs["FIB_382"],
+        "resistance": fibs["FIB_618"],
+        "p_levels": fibs,
         "ai_eval": ai_eval,
-        "signals": {"above_200": True}
+        "signals": {"above_200": bool(last_p > (df["SMA200"].iloc[-1] if "SMA200" in df else 0))}
     }
