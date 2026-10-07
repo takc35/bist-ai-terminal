@@ -2,9 +2,6 @@ import pandas as pd
 import yfinance as yf
 
 def fetch_bist_ticker(ticker_symbol):
-    """
-    BIST, ABD Hisseleri, Kripto ve Emtialar için güvenli canlı veri çeker.
-    """
     sym = str(ticker_symbol).upper().strip()
     
     symbol_map = {
@@ -28,8 +25,8 @@ def fetch_bist_ticker(ticker_symbol):
 
     try:
         stock = yf.Ticker(target_symbol)
-        df = stock.history(period="5d")
-        if df.empty or len(df) < 2:
+        df = stock.history(period="1y")
+        if df.empty or len(df) < 5:
             return None
         df = df.reset_index()
         df = df.dropna(subset=["Close"])
@@ -42,9 +39,6 @@ def fetch_bist_ticker(ticker_symbol):
         return None
 
 def get_market_overview():
-    """
-    Döviz, Emtia ve ABD Hisseleri için hata korumalı canlı veri listesi üretir.
-    """
     items = {
         "USD/TRY": {"symbol": "TRY=X", "unit": "₺"},
         "EUR/TRY": {"symbol": "EURTRY=X", "unit": "₺"},
@@ -60,7 +54,6 @@ def get_market_overview():
         "ETH/USDT": {"symbol": "ETH-USD", "unit": "$"}
     }
     
-    # Varsayılan USD Kuru (Veri alınamazsa fallback olarak kullanılır)
     usd_rate = 34.50
     try:
         usd_df = fetch_bist_ticker("USDTRY")
