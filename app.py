@@ -2,12 +2,12 @@ import plotly.graph_objects as go
 import pandas as pd
 import streamlit as st
 from analysis_engine import add_indicators, analyze
-from data_fetcher import fetch_bist_ticker
+from data_fetcher import fetch_bist_ticker, get_market_overview
 from news_engine import get_daily_news
 
 st.set_page_config(page_title="TUNA BIST AI TERMINAL", layout="wide", initial_sidebar_state="collapsed")
 
-# Terminal Stilleri
+# Terminal Karanlık Tema Stilleri
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
@@ -23,6 +23,9 @@ st.markdown("""
     .card {
         background: rgba(18, 26, 43, 0.95); border: 1px solid var(--line);
         border-radius: 15px; padding: 18px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); margin-bottom: 14px;
+    }
+    .market-card {
+        background: #121a2b; border: 1px solid #26344e; border-radius: 12px; padding: 14px; margin-bottom: 12px;
     }
     .kpi-label { color: #9ba9bf; font-size: 12px; font-weight: 600; }
     .kpi-val { font-size: 25px; font-weight: 800; margin-top: 5px; color: #eef3fb; }
@@ -55,12 +58,12 @@ st.markdown("""
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <div>
         <h1 style="margin:0; font-size:26px;">🧠 TUNA BIST AI TERMINAL</h1>
-        <div style="color:#9ba9bf; font-size:12px;">BIST Decision Support System · v0.8</div>
+        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v0.9</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-selected_ticker = st.text_input("🔍 Hisse Kodu Seçiniz (Örn: TUPRS, THYAO, AKBNK):", value="TUPRS").upper()
+selected_ticker = st.text_input("🔍 Hisse veya Varlık Kodu Seçiniz (Örn: TUPRS, THYAO, NVDA, AAPL):", value="TUPRS").upper()
 raw_df = fetch_bist_ticker(selected_ticker)
 
 if raw_df is not None:
@@ -70,7 +73,7 @@ if raw_df is not None:
     # ÜST METRİKLER
     col1, col2, col3, col4 = st.columns([1, 1, 1, 2])
     with col1:
-        st.markdown(f'<div class="card"><div class="kpi-label">Hisse</div><div class="kpi-val">{selected_ticker}</div><div class="kpi-label" style="color:#63a4ff;">Borsa İstanbul</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="card"><div class="kpi-label">Varlık / Hisse</div><div class="kpi-val">{selected_ticker}</div><div class="kpi-label" style="color:#63a4ff;">Canlı Piyasa</div></div>', unsafe_allow_html=True)
     with col2:
         c_class = "green" if res['change_pct'] >= 0 else "red"
         st.markdown(f'<div class="card"><div class="kpi-label">Fiyat</div><div class="kpi-val">{res["last_price"]:.2f} TL</div><div class="{c_class}" style="font-size:12px; font-weight:700;">%{res["change_pct"]:.2f} Günlük</div></div>', unsafe_allow_html=True)
@@ -89,12 +92,13 @@ if raw_df is not None:
         """, unsafe_allow_html=True)
 
     # SEKMELER
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "📊 Tekil Hisse Analizi", 
         "💼 Model Portföyler (Haftalık/Aylık)", 
         "🎯 Yön & Hedef Fiyatlar", 
         "🚀 Sektörel Radar & Top 10", 
-        "📰 Haber & KAP Etki Motoru"
+        "📰 Haber & KAP Etki Motoru",
+        "🌐 Emtia, ABD Hisseleri & Fonlar"
     ])
 
     # TAB 1: TEKİL HİSSE ANALİZİ
@@ -349,6 +353,92 @@ if raw_df is not None:
                 <h4 style="margin:8px 0;">{n['title']}</h4>
                 <p style="font-size:12px; color:#b7c2d4;">{n['desc']}</p>
                 <div style="font-size:11px; color:#63a4ff;">Sistem Skor Katkısı: +{n['score_bonus']} Puan</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+    # TAB 6: GLOBAL PİYASALAR, EMTİA, ABD HİSSELERİ VE FONLAR (SELCOIN PANELİ)
+    with tab6:
+        st.subheader("🌐 Döviz, Emtia, ABD Hisseleri, Kripto ve TEFAS Fonları")
+        st.caption("Selcoin tarzı anlık varlık kartları, canlı fiyatlar ve TEFAS fon takip ekranı:")
+
+        m_data = get_market_overview()
+        
+        # 1. Döviz & Emtia Kartları
+        st.markdown("#### 🟡 Döviz & Emtialar")
+        m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+        
+        commodities = [
+            ("Gram Altın", "Gram Altın"), ("Ons Altın", "Ons Altın"), 
+            ("Gram Gümüş", "Gram Gümüş"), ("Ons Gümüş", "Ons Gümüş"),
+            ("Brent Petrol", "Brent Petrol"), ("USD/TRY", "USD/TRY"), ("EUR/TRY", "EUR/TRY")
+        ]
+        
+        cols = [m_col1, m_col2, m_col3, m_col4]
+        for idx, (label, key) in enumerate(commodities):
+            c_target = cols[idx % 4]
+            if key in m_data:
+                info = m_data[key]
+                c_class = "green" if info["change"] >= 0 else "red"
+                sign = "+" if info["change"] >= 0 else ""
+                c_target.markdown(f"""
+                <div class="market-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <b style="font-size:14px; color:#eef3fb;">{label}</b>
+                        <span class="{c_class}" style="font-size:12px; font-weight:700;">{sign}%{info['change']:.2f}</span>
+                    </div>
+                    <div style="font-size:20px; font-weight:800; margin-top:8px;">{info['unit']}{info['price']:,.2f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.divider()
+
+        # 2. ABD Hisseleri & Kripto Kartları
+        st.markdown("#### 🇺🇸 ABD Devleri & Kripto")
+        u_col1, u_col2, u_col3, u_col4 = st.columns(4)
+        us_assets = [("NVDA", "NVDA"), ("AAPL", "AAPL"), ("TSLA", "TSLA"), ("BTC/USDT", "BTC/USDT"), ("ETH/USDT", "ETH/USDT")]
+        u_cols = [u_col1, u_col2, u_col3, u_col4]
+        for idx, (label, key) in enumerate(us_assets):
+            u_target = u_cols[idx % 4]
+            if key in m_data:
+                info = m_data[key]
+                c_class = "green" if info["change"] >= 0 else "red"
+                sign = "+" if info["change"] >= 0 else ""
+                u_target.markdown(f"""
+                <div class="market-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <b style="font-size:14px; color:#63a4ff;">{label}</b>
+                        <span class="{c_class}" style="font-size:12px; font-weight:700;">{sign}%{info['change']:.2f}</span>
+                    </div>
+                    <div style="font-size:20px; font-weight:800; margin-top:8px;">{info['unit']}{info['price']:,.2f}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        st.divider()
+
+        # 3. TEFAS Yatırım Fonları Kartları
+        st.markdown("#### 📊 Öne Çıkan TEFAS Yatırım Fonları")
+        f_col1, f_col2, f_col3 = st.columns(3)
+        
+        funds = [
+            {"kod": "MAC", "ad": "Marmara Capital Hisse Senedi", "fiyat": "0,6878 TL", "degisim": "-1,63%"},
+            {"kod": "IIH", "ad": "İstanbul Portföy Üçüncü Hisse", "fiyat": "31,903 TL", "degisim": "-2,38%"},
+            {"kod": "TI2", "ad": "İş Portföy BIST 100 Dışı", "fiyat": "0,1215 TL", "degisim": "-2,54%"},
+            {"kod": "GMR", "ad": "Inveo Portföy Hisse Senedi", "fiyat": "1,1873 TL", "degisim": "-0,98%"},
+            {"kod": "AK3", "ad": "Ak Portföy Birinci Hisse Senedi", "fiyat": "50,661 TL", "degisim": "-2,26%"},
+            {"kod": "BUY", "ad": "Alバラカ Portföy Katılım Hisse", "fiyat": "1,5600 TL", "degisim": "-2,32%"}
+        ]
+        
+        f_cols = [f_col1, f_col2, f_col3]
+        for idx, f_info in enumerate(funds):
+            f_target = f_cols[idx % 3]
+            f_target.markdown(f"""
+            <div class="market-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <b style="font-size:15px; color:#35d07f;">{f_info['kod']}</b>
+                    <span class="red" style="font-size:12px; font-weight:700;">{f_info['degisim']}</span>
+                </div>
+                <div style="font-size:12px; color:#9ba9bf; margin-top:3px;">{f_info['ad']}</div>
+                <div style="font-size:18px; font-weight:800; margin-top:6px;">{f_info['fiyat']}</div>
             </div>
             """, unsafe_allow_html=True)
 
