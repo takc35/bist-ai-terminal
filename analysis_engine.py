@@ -50,52 +50,62 @@ def add_indicators(df):
     df["VOL_RATIO"] = df["Volume"] / df["VOL20"]
     df["ROC20"] = c.pct_change(20) * 100
     df["ROC60"] = c.pct_change(60) * 100
+    
+    # Boş kalan / hesaplanamayan yerleri doldur
+    df = df.bfill().ffill()
     return df
 
 def support_resistance(df, window=20):
     x = df.tail(120)
-    support = x["Low"].rolling(window).min().iloc[-1]
-    resistance = x["High"].rolling(window).max().iloc[-1]
+    support = x["Low"].rolling(window).min().dropna().iloc[-1]
+    resistance = x["High"].rolling(window).max().dropna().iloc[-1]
     return float(support), float(resistance)
 
 def technical_score(df):
     x = df.iloc[-1]
     score = 50.0
-    if x["Close"] > x["SMA200"]: score += 15
+    
+    if pd.notna(x.get("SMA200")) and x["Close"] > x["SMA200"]: score += 15
     else: score -= 15
-    if x["Close"] > x["SMA50"]: score += 8
+    
+    if pd.notna(x.get("SMA50")) and x["Close"] > x["SMA50"]: score += 8
     else: score -= 8
-    if x["Close"] > x["SMA25"]: score += 5
+    
+    if pd.notna(x.get("SMA25")) and x["Close"] > x["SMA25"]: score += 5
     else: score -= 5
 
-    if 50 <= x["RSI14"] <= 68: score += 7
-    elif x["RSI14"] < 30: score += 3
-    elif x["RSI14"] > 75: score -= 7
+    rsi_val = x.get("RSI14", 50)
+    if 50 <= rsi_val <= 68: score += 7
+    elif rsi_val < 30: score += 3
+    elif rsi_val > 75: score -= 7
 
-    if x["MACD"] > x["MACD_SIGNAL"]: score += 7
+    if x.get("MACD", 0) > x.get("MACD_SIGNAL", 0): score += 7
     else: score -= 4
 
-    if x["VOL_RATIO"] >= 1.5: score += 5
-    elif x["VOL_RATIO"] < 0.7: score -= 2
+    vol_r = x.get("VOL_RATIO", 1)
+    if vol_r >= 1.5: score += 5
+    elif vol_r < 0.7: score -= 2
 
     return round(float(np.clip(score, 0, 100)), 1)
 
 def momentum_score(df):
     x = df.iloc[-1]
     score = 50.0
-    score += np.clip(x["ROC20"], -20, 20) * 0.7
-    score += np.clip(x["ROC60"], -30, 30) * 0.35
-    if x["MACD"] > x["MACD_SIGNAL"]: score += 7
-    if x["Close"] > x["SMA25"]: score += 5
+    roc20 = x.get("ROC20", 0)
+    roc60 = x.get("ROC60", 0)
+    if pd.notna(roc20): score += np.clip(roc20, -20, 20) * 0.7
+    if pd.notna(roc60): score += np.clip(roc60, -30, 30) * 0.35
+    if x.get("MACD", 0) > x.get("MACD_SIGNAL", 0): score += 7
+    if pd.notna(x.get("SMA25")) and x["Close"] > x["SMA25"]: score += 5
     return round(float(np.clip(score, 0, 100)), 1)
 
 def trend_score(df):
     x = df.iloc[-1]
-    mas = [x["SMA25"], x["SMA50"], x["SMA100"], x["SMA200"]]
+    mas = [x.get("SMA25"), x.get("SMA50"), x.get("SMA100"), x.get("SMA200")]
     valid = [v for v in mas if pd.notna(v)]
     if not valid: return 50.0
     above = sum(x["Close"] > v for v in valid)
-    slope_bonus = 5 if x["SMA50"] > df["SMA50"].iloc[-10] else -5
+    slope_bonus = 5 if pd.notna(x.get("SMA50")) and len(df) >= 10 and x["SMA50"] > df["SMA50"].iloc[-10] else -5
     return round(float(np.clip(25 + 15*above + slope_bonus, 0, 100)), 1)
 
 def crossover_flags(df):
@@ -103,10 +113,19 @@ def crossover_flags(df):
     for a, b, name in [(25, 50, "25_50"), (50, 200, "50_200")]:
         A = df[f"SMA{a}"]
         B = df[f"SMA{b}"]
-        out[name+"_golden"] = bool(A.iloc[-1] > B.iloc[-1] and A.iloc[-2] <= B.iloc[-2])
-        out[name+"_death"] = bool(A.iloc[-1] < B.iloc[-1] and A.iloc[-2] >= B.iloc[-2])
-    out["above_200"] = bool(df["Close"].iloc[-1] > df["SMA200"].iloc[-1])
-    out["breakout_20"] = bool(df["Close"].iloc[-1] > df["High"].rolling(20).max().shift(1).iloc[-1])
+        if len(A) >= 2 and pd.notna(A.iloc[-1]) and pd.notna(B.iloc[-1]):
+            out[name+"_golden"] = bool(A.iloc[-1] > B.iloc[-1] and A.iloc[-2] <= B.iloc[-2])
+            out[name+"_death"] = bool(A.iloc[-1] < B.iloc[-1] and A.iloc[-2] >= B.iloc[-2])
+        else:
+            out[name+"_golden"] = False
+            out[name+"_death"] = False
+            
+    last_c = df["Close"].iloc[-1]
+    sma200_last = df["SMA200"].iloc[-1] if "SMA200" in df else np.nan
+    out["above_200"] = bool(pd.notna(sma200_last) and last_c > sma200_last)
+    
+    high_20 = df["High"].rolling(20).max().shift(1).iloc[-1]
+    out["breakout_20"] = bool(pd.notna(high_20) and last_c > high_20)
     return out
 
 def analyze(df, fundamental=75, valuation=70, sector=75, news=70, macro=65, risk=60):
@@ -124,9 +143,13 @@ def analyze(df, fundamental=75, valuation=70, sector=75, news=70, macro=65, risk
     vals = [tech, mom, trend, fundamental, valuation, sector, news, macro, risk]
     total = round(float(np.dot(vals, list(weights.values()))), 1)
 
+    last_price = float(df["Close"].iloc[-1])
+    prev_price = float(df["Close"].iloc[-2]) if len(df) > 1 else last_price
+    change_pct = float(((last_price / prev_price) - 1) * 100) if prev_price != 0 else 0.0
+
     return {
-        "last_price": float(df["Close"].iloc[-1]),
-        "change_pct": float(((df["Close"].iloc[-1] / df["Close"].iloc[-2]) - 1) * 100),
+        "last_price": last_price,
+        "change_pct": change_pct,
         "technical": tech,
         "momentum": mom,
         "trend": trend,
@@ -136,6 +159,11 @@ def analyze(df, fundamental=75, valuation=70, sector=75, news=70, macro=65, risk
         "news": news,
         "macro": macro,
         "risk": risk,
+        "total": total,
+        "support": support,
+        "resistance": resistance,
+        "signals": crossover_flags(df)
+    }
         "total": total,
         "support": support,
         "resistance": resistance,
