@@ -1,9 +1,9 @@
-from analysis_engine import analyze
-from data_fetcher import fetch_bist_ticker
-from news_engine import get_daily_news
 import plotly.graph_objects as go
 import pandas as pd
 import streamlit as st
+from analysis_engine import add_indicators, analyze
+from data_fetcher import fetch_bist_ticker
+from news_engine import get_daily_news
 
 st.set_page_config(page_title="TUNA BIST AI TERMINAL", layout="wide", initial_sidebar_state="expanded")
 
@@ -26,10 +26,12 @@ tab1, tab2, tab3 = st.tabs(["📊 Tekil Hisse Analizi", "🚀 BIST Otomatik Tara
 
 with tab1:
     with st.spinner(f"{selected_ticker} verisi yükleniyor..."):
-        df = fetch_bist_ticker(selected_ticker)
+        raw_df = fetch_bist_ticker(selected_ticker)
         
-    if df is not None:
-        res = analyze(df)
+    if raw_df is not None:
+        # İndikatörleri dataframe'e ekle
+        df = add_indicators(raw_df)
+        res = analyze(raw_df)
         
         col1, col2, col3, col4, col5 = st.columns(5)
         col1.metric("Son Fiyat", f"{res['last_price']:.2f} TL", f"%{res['change_pct']:.2f}")
@@ -96,6 +98,11 @@ with tab2:
 
 with tab3:
     st.subheader("🇹🇷 Günlük Türkiye Makro & KAP Haber Akışı")
+    news_list = get_daily_news()
+    for n in news_list:
+        with st.expander(f"{n['impact']} | {n['title']} ({n['category']})"):
+            st.write(n["desc"])
+            st.caption(f"Skor Etkisi: +{n['score_bonus']} puan")
     news_list = get_daily_news()
     for n in news_list:
         with st.expander(f"{n['impact']} | {n['title']} ({n['category']})"):
