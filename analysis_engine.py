@@ -43,19 +43,16 @@ def fibonacci_levels(df):
     diff = high - low
     
     return {
-        "FIB_100": round(high, 2),        # %0 Zirve
-        "FIB_786": round(high - diff * 0.214, 2), # %23.6
-        "FIB_618": round(high - diff * 0.382, 2), # %38.2
-        "FIB_500": round(high - diff * 0.500, 2), # %50.0 Denge
-        "FIB_382": round(high - diff * 0.618, 2), # %61.8 Altın Oran
-        "FIB_236": round(high - diff * 0.786, 2), # %78.6
-        "FIB_000": round(low, 2)          # %100 Dip
+        "FIB_100": round(high, 2),                  # %0 Zirve
+        "FIB_786": round(high - diff * 0.214, 2),   # %23.6
+        "FIB_618": round(high - diff * 0.382, 2),   # %38.2
+        "FIB_500": round(high - diff * 0.500, 2),   # %50.0 Denge
+        "FIB_382": round(high - diff * 0.618, 2),   # %61.8 Altın Oran
+        "FIB_236": round(high - diff * 0.786, 2),   # %78.6
+        "FIB_000": round(low, 2)                    # %100 Dip
     }
 
 def calculate_dynamic_score(df):
-    """
-    Gerçek Teknik Verilere Göre Dinamik Skorlama (0-100)
-    """
     last_p = float(df["Close"].iloc[-1])
     score = 50.0
     
@@ -65,27 +62,23 @@ def calculate_dynamic_score(df):
     macd_val = df["MACD"].iloc[-1] if "MACD" in df else 0
     macd_sig = df["MACD_SIGNAL"].iloc[-1] if "MACD_SIGNAL" in df else 0
     
-    # 200 Günlük Trend
     if sma200:
         if last_p > sma200: score += 15
         else: score -= 15
         
-    # 50 Günlük Trend
     if sma50:
         if last_p > sma50: score += 10
         else: score -= 10
         
-    # RSI Durumu
     if 45 <= rsi_val <= 65:
         score += 10
     elif rsi_val > 70:
-        score -= 15  # Aşırı alım / Düzeltme riski
+        score -= 15
     elif rsi_val < 30:
-        score += 5   # Aşırı satış / Tepki alımı fırsatı
+        score += 5
     else:
         score -= 5
         
-    # MACD Sinyali
     if macd_val > macd_sig: score += 10
     else: score -= 10
     
@@ -119,7 +112,6 @@ def get_ai_reasoning(df, total_score):
 
     fibs = fibonacci_levels(df)
     
-    # Gerçekçi ve Çeşitlendirilmiş Sinyal Karar Mekanizması
     if total_score >= 75:
         action, action_class = "GÜÇLÜ AL (POZİTİF)", "bgreen"
     elif total_score >= 60:
@@ -169,6 +161,7 @@ def analyze(df):
         "signal_class": ai_eval["action_class"],
         "support": fibs["FIB_382"],
         "resistance": fibs["FIB_618"],
+        "fibs": fibs,
         "p_levels": fibs,
         "ai_eval": ai_eval,
         "signals": {"above_200": bool(last_p > (df["SMA200"].iloc[-1] if "SMA200" in df else 0))}
