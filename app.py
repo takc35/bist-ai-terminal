@@ -94,7 +94,7 @@ if raw_df is not None:
         </div>
         """, unsafe_allow_html=True)
 
-    # SEKMELER (8 KUSURSUZ SEKME)
+    # SEKMELER
     tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📊 Tekil Analiz & FIBO", 
         "💼 Model Portföyler", 
@@ -173,7 +173,7 @@ if raw_df is not None:
             </div>
             """, unsafe_allow_html=True)
 
-    # TAB 2: MODEL PORTFÖYLER (GÜNCELLENMİŞ EKSİKSİZ LİSTE)
+    # TAB 2: MODEL PORTFÖYLER
     with tab2:
         st.subheader("💼 AI Model Portföyler ve Güncel Gerekçeler")
         portfolio_type = st.selectbox("Model Portföy Türünü Seçiniz:", [
@@ -303,7 +303,7 @@ if raw_df is not None:
                 })
         st.table(pd.DataFrame(scan_results).sort_values("Genel AI Skor", ascending=False))
 
-    # TAB 6: TEMETTÜ & BİLANÇO TAKVİMİ (REVİZE GERÇEK BİST VERİLERİ)
+    # TAB 6: TEMETTÜ & BİLANÇO TAKVİMİ
     with tab6:
         st.subheader("📅 BİST Güncel Temettü & Bilanço Takvimi")
         st.markdown("""
@@ -336,7 +336,7 @@ if raw_df is not None:
         for n in get_daily_news():
             st.success(f"{n['title']} — ({n['category']})")
 
-    # TAB 8: DÖVİZ, EMTİA & TAM TEFAS FON DETAYLARI (BİREBİR GERİ GELDİ)
+    # TAB 8: TEFAS FONLARI & DÖVİZ/EMTİA
     with tab8:
         st.subheader("🌐 Döviz, Emtia, ABD Hisseleri ve TEFAS Fonları")
         m_data = get_market_overview()
@@ -359,7 +359,6 @@ if raw_df is not None:
 
         st.divider()
 
-        # KURUMSAL TEFAS FON EKRANI (TAM VERİTABANI)
         st.markdown("#### 📊 TEFAS Yatırım Fonları & Detaylı İnceleme Terminali")
         tefas_master_db = {
             "PUR": {"ad": "ALE PORTFÖY HİSSE SENEDİ FONU (HİSSE YOĞUN FON)", "fiyat": 2.410530, "donem_getiri": 64.20, "donem_yuksek": 2.850000, "donem_dusuk": 1.250000, "kategori_sira": "12 / 200", "kategori": "Hisse Senedi Fonu", "yatirimci": 38450, "toplam_deger": "890,5M ₺", "pazar_payi": "0.45%", "varlik": {"Hisse Senedi": 96.80, "Takasbank Para Piyasası": 3.20}, "getiri": {"1 Ay": 4.20, "3 Ay": 14.80, "6 Ay": 32.50, "1 Yıl": 64.20, "3 Yıl": 210.00, "5 Yıl": 780.00}},
