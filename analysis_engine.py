@@ -23,11 +23,6 @@ def macd(close):
     signal = ema(line, 9)
     return line, signal, line - signal
 
-def bollinger(close, n=20, k=2):
-    mid = sma(close, n)
-    std = close.rolling(n).std()
-    return mid, mid + k*std, mid - k*std
-
 def atr(df, n=14):
     prev = df["Close"].shift(1)
     tr = pd.concat([
@@ -44,7 +39,6 @@ def add_indicators(df):
         df[f"SMA{n}"] = sma(c, n)
     df["RSI14"] = rsi(c)
     df["MACD"], df["MACD_SIGNAL"], df["MACD_HIST"] = macd(c)
-    df["BB_MID"], df["BB_UPPER"], df["BB_LOWER"] = bollinger(c)
     df["ATR14"] = atr(df)
     df["VOL20"] = df["Volume"].rolling(20).mean()
     df["VOL_RATIO"] = df["Volume"] / df["VOL20"]
@@ -62,40 +56,24 @@ def support_resistance(df, window=20):
 def technical_score(df):
     x = df.iloc[-1]
     score = 50.0
-    
-    if pd.notna(x.get("SMA200")) and x["Close"] > x["SMA200"]:
-        score += 15
-    else:
-        score -= 15
-    
-    if pd.notna(x.get("SMA50")) and x["Close"] > x["SMA50"]:
-        score += 8
-    else:
-        score -= 8
-    
-    if pd.notna(x.get("SMA25")) and x["Close"] > x["SMA25"]:
-        score += 5
-    else:
-        score -= 5
+    if pd.notna(x.get("SMA200")) and x["Close"] > x["SMA200"]: score += 15
+    else: score -= 15
+    if pd.notna(x.get("SMA50")) and x["Close"] > x["SMA50"]: score += 8
+    else: score -= 8
+    if pd.notna(x.get("SMA25")) and x["Close"] > x["SMA25"]: score += 5
+    else: score -= 5
 
     rsi_val = x.get("RSI14", 50)
-    if 50 <= rsi_val <= 68:
-        score += 7
-    elif rsi_val < 30:
-        score += 3
-    elif rsi_val > 75:
-        score -= 7
+    if 50 <= rsi_val <= 68: score += 7
+    elif rsi_val < 30: score += 3
+    elif rsi_val > 75: score -= 7
 
-    if x.get("MACD", 0) > x.get("MACD_SIGNAL", 0):
-        score += 7
-    else:
-        score -= 4
+    if x.get("MACD", 0) > x.get("MACD_SIGNAL", 0): score += 7
+    else: score -= 4
 
     vol_r = x.get("VOL_RATIO", 1)
-    if vol_r >= 1.5:
-        score += 5
-    elif vol_r < 0.7:
-        score -= 2
+    if vol_r >= 1.5: score += 5
+    elif vol_r < 0.7: score -= 2
 
     return round(float(np.clip(score, 0, 100)), 1)
 
@@ -104,22 +82,17 @@ def momentum_score(df):
     score = 50.0
     roc20 = x.get("ROC20", 0)
     roc60 = x.get("ROC60", 0)
-    if pd.notna(roc20):
-        score += np.clip(roc20, -20, 20) * 0.7
-    if pd.notna(roc60):
-        score += np.clip(roc60, -30, 30) * 0.35
-    if x.get("MACD", 0) > x.get("MACD_SIGNAL", 0):
-        score += 7
-    if pd.notna(x.get("SMA25")) and x["Close"] > x["SMA25"]:
-        score += 5
+    if pd.notna(roc20): score += np.clip(roc20, -20, 20) * 0.7
+    if pd.notna(roc60): score += np.clip(roc60, -30, 30) * 0.35
+    if x.get("MACD", 0) > x.get("MACD_SIGNAL", 0): score += 7
+    if pd.notna(x.get("SMA25")) and x["Close"] > x["SMA25"]: score += 5
     return round(float(np.clip(score, 0, 100)), 1)
 
 def trend_score(df):
     x = df.iloc[-1]
     mas = [x.get("SMA25"), x.get("SMA50"), x.get("SMA100"), x.get("SMA200")]
     valid = [v for v in mas if pd.notna(v)]
-    if not valid:
-        return 50.0
+    if not valid: return 50.0
     above = sum(x["Close"] > v for v in valid)
     slope_bonus = 5 if pd.notna(x.get("SMA50")) and len(df) >= 10 and x["SMA50"] > df["SMA50"].iloc[-10] else -5
     return round(float(np.clip(25 + 15*above + slope_bonus, 0, 100)), 1)
@@ -144,7 +117,7 @@ def crossover_flags(df):
     out["breakout_20"] = bool(pd.notna(high_20) and last_c > high_20)
     return out
 
-def analyze(df, fundamental=75, valuation=70, sector=75, news=70, macro=65, risk=60):
+def analyze(df, fundamental=86, valuation=72, sector=80, news=74, macro=65, risk=61):
     df = add_indicators(df)
     tech = technical_score(df)
     mom = momentum_score(df)
