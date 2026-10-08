@@ -54,7 +54,7 @@ st.markdown("""
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <div>
         <h1 style="margin:0; font-size:26px;">🧠 TUNA BIST AI TERMINAL</h1>
-        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v4.0 Pro</div>
+        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v4.5 Full</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -98,16 +98,16 @@ if raw_df is not None:
     # SEKMELER
     tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8 = st.tabs([
         "📊 Tekil Analiz & FIBO", 
-        "💼 Model Portföyler", 
+        "💼 Model Portföyler (4 Adet)", 
         "🏛️ BİST 30 & Para Akışı",
         "🎯 Yön & Hedefler", 
         "🚀 Sektörel Radar", 
         "📅 Temettü & Bilanço Takvimi",
         "📰 Haber & KAP Etki",
-        "🌐 Global & TEFAS Fonları"
+        "🌐 Emtia & TEFAS Fonları"
     ])
 
-    # TAB 1: TEKİL HİSSE ANALİZİ VE MADDELİ TEMEL + TEKNİK DEĞERLENDİRME
+    # TAB 1: TEKİL HİSSE ANALİZİ
     with tab1:
         c_left, c_right = st.columns([1.6, 1])
         with c_left:
@@ -135,7 +135,6 @@ if raw_df is not None:
             st.plotly_chart(fig, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # TEMİZ MADDELİ ANALİZ KARTI (HTML BOZULMASI OLMADAN)
             st.markdown(f"### 📌 Neden Listede / Değerlendirme — {selected_ticker}")
             st.info(f"**{det_data['reason_title']}**\n\n{det_data['reason_desc']}")
             
@@ -175,12 +174,14 @@ if raw_df is not None:
             </div>
             """, unsafe_allow_html=True)
 
-    # TAB 2: MODEL PORTFÖYLER
+    # TAB 2: EXSİKSİZ 4 ADET MODEL PORTFÖY
     with tab2:
         st.subheader("💼 AI Model Portföyler ve Güncel Gerekçeler")
         portfolio_type = st.selectbox("Model Portföy Türünü Seçiniz:", [
             "BIST 100 — Haftalık Model Portföy (Güncelleme: Pazartesi)",
-            "BIST 100 — Aylık Model Portföy (Güncelleme: Ayın 1'i)"
+            "BIST 100 — Aylık Model Portföy (Güncelleme: Ayın 1'i)",
+            "BIST TÜM — Haftalık Model Portföy (Güncelleme: Pazartesi)",
+            "BIST TÜM — Aylık Model Portföy (Güncelleme: Ayın 1'i)"
         ])
         
         base_portfolios = {
@@ -190,6 +191,27 @@ if raw_df is not None:
                 {"hisse": "KORDS", "ad": "Kordsa Teknik Tekstil", "durum": "Listeye Girdi", "giris": 2.80, "agirlik": "%20.0", "baslik": "Kâr büyümesi eşiği geçti", "neden": "Net kâr ve momentum ivmelendi."},
                 {"hisse": "THYAO", "ad": "Türk Hava Yolları", "durum": "Korundu", "giris": 288.50, "agirlik": "%20.0", "baslik": "Doluluk oranları yüksek", "neden": "RSI ve hacim trendi destekliyor."},
                 {"hisse": "AKBNK", "ad": "Akbank T.A.Ş.", "durum": "Korundu", "giris": 53.20, "agirlik": "%20.0", "baslik": "Net faiz marjı pozitif", "neden": "Göreceli gücü yüksek."}
+            ],
+            "BIST 100 — Aylık Model Portföy (Güncelleme: Ayın 1'i)": [
+                {"hisse": "TUPRS", "ad": "Tüpraş Rafineri", "durum": "Korundu", "giris": 378.00, "agirlik": "%20.0", "baslik": "Rafineri marjları güçlü", "neden": "FAVÖK kârlılığı ve nakit akışı yüksek."},
+                {"hisse": "ASELS", "ad": "Aselsan Elektronik", "durum": "Listeye Girdi", "giris": 60.50, "agirlik": "%20.0", "baslik": "Sözleşme akışları ivme kazandırdı", "neden": "KAP duyuruları ve sipariş büyümesi artıda."},
+                {"hisse": "BIMAS", "ad": "BİM Mağazalar", "durum": "Korundu", "giris": 480.00, "agirlik": "%20.0", "baslik": "Defansif yapısıyla nakit üretiyor", "neden": "İç talep duyarlılığı yüksek."},
+                {"hisse": "SAHOL", "ad": "Sabancı Holding", "durum": "Korundu", "giris": 86.50, "agirlik": "%20.0", "baslik": "Göreceli iskonto avantajı", "neden": "Net aktif değerine göre ucuz kalmayı sürdürüyor."},
+                {"hisse": "EREGL", "ad": "Ereğli Demir Çelik", "durum": "Listeye Girdi", "giris": 36.80, "agirlik": "%20.0", "baslik": "Sektörel dip toparlanması", "neden": "Çelik marjlarında yükseliş trendi teyit edildi."}
+            ],
+            "BIST TÜM — Haftalık Model Portföy (Güncelleme: Pazartesi)": [
+                {"hisse": "CLEBI", "ad": "Çelebi Hava Servisi", "durum": "Listeye Girdi", "giris": 1120.00, "agirlik": "%20.0", "baslik": "Havacılıkta hacim artışı", "neden": "Haftalık RSI ve hacim anomalisi yüksek."},
+                {"hisse": "SDTTR", "ad": "SDT Uzay ve Savunma", "durum": "Korundu", "giris": 275.00, "agirlik": "%20.0", "baslik": "Yüksek marjlı savunma siparişleri", "neden": "Momentum üst kademede kalıyor."},
+                {"hisse": "ALARK", "ad": "Alarko Holding", "durum": "Korundu", "giris": 104.50, "agirlik": "%20.0", "baslik": "Enerji nakit akışı", "neden": "Kısa vadeli teknik indikatörler olumlu."},
+                {"hisse": "ASTOR", "ad": "Astor Enerji", "durum": "Listeye Girdi", "giris": 93.80, "agirlik": "%20.0", "baslik": "İhracat teslimat ivmesi", "neden": "Yurt dışı sözleşme gücü yüksek."},
+                {"hisse": "PGSUS", "ad": "Pegasus", "durum": "Korundu", "giris": 230.00, "agirlik": "%20.0", "baslik": "Doluluk ve yolcu artışı", "neden": "Haftalık momentum destekliyor."}
+            ],
+            "BIST TÜM — Aylık Model Portföy (Güncelleme: Ayın 1'i)": [
+                {"hisse": "KONTR", "ad": "Kontrolmatik Teknoloji", "durum": "Listeye Girdi", "giris": 57.50, "agirlik": "%20.0", "baslik": "Enerji depolama projeleri", "neden": "Uzun vadeli backlog büyümesi ile eklendi."},
+                {"hisse": "OTKAR", "ad": "Otokar Otomotiv", "durum": "Korundu", "giris": 485.00, "agirlik": "%20.0", "baslik": "Savunma sanayi ihracatı", "neden": "İhracat oranı yüksekliği ve kârlılık kalitesi var."},
+                {"hisse": "DOHOL", "ad": "Doğan Holding", "durum": "Korundu", "giris": 14.10, "agirlik": "%20.0", "baslik": "Solo net nakit pozisyonu", "neden": "Çarpan bazında ucuz kalmayı sürdürüyor."},
+                {"hisse": "YAS", "ad": "Yapı Kredi Koç İştirak", "durum": "Korundu", "giris": 81.50, "agirlik": "%20.0", "baslik": "İştirak kârlılık katkısı", "neden": "Aylık bazda düzenli nakit akışı veriyor."},
+                {"hisse": "SISE", "ad": "Şişecam", "durum": "Listeye Girdi", "giris": 44.20, "agirlik": "%20.0", "baslik": "Küresel cam marjı döngüsü", "neden": "Uzun vadeli değerleme cazibesi yüksek."}
             ]
         }
         
@@ -199,11 +221,21 @@ if raw_df is not None:
             last_p = float(t_data["Close"].iloc[-1]) if t_data is not None else item["giris"]
             ret_pct = ((last_p - item["giris"]) / item["giris"]) * 100
             ret_str = f"+%{ret_pct:.2f}" if ret_pct >= 0 else f"-%{abs(ret_pct):.2f}"
+            status_color = "bgreen" if item["durum"] in ["Korundu", "Listeye Girdi"] else "bred"
             st.markdown(f"""
             <div class="card" style="margin-bottom:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div><b style="font-size:16px; color:#63a4ff;">{item['hisse']}</b> — <span style="font-size:13px; color:#9ba9bf;">{item['ad']}</span></div>
-                    <div style="font-size:13px;">Giriş: <b>{item['giris']:.2f} TL</b> | Canlı: <b>{last_p:.2f} TL</b> | Getiri: <b class="green">{ret_str}</b></div>
+                    <div>
+                        <b style="font-size:16px; color:#63a4ff;">{item['hisse']}</b> — <span style="font-size:13px; color:#9ba9bf;">{item['ad']}</span>
+                        <span class="badge {status_color}" style="margin-left:10px;">{item['durum']}</span>
+                    </div>
+                    <div style="font-size:13px;">
+                        Giriş: <b>{item['giris']:.2f} TL</b> | Canlı: <b>{last_p:.2f} TL</b> | Ağırlık: <b>{item['agirlik']}</b> | Getiri: <b class="green">{ret_str}</b>
+                    </div>
+                </div>
+                <div style="margin-top:8px; border-top:1px solid #26344e; padding-top:6px;">
+                    <b style="font-size:13px; color:#eef3fb;">{item['baslik']}</b>
+                    <p style="font-size:12px; color:#9ba9bf; margin:2px 0 0 0;">{item['neden']}</p>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -211,7 +243,6 @@ if raw_df is not None:
     # TAB 3: BİST 30 VE PARA GİRİŞ / ÇIKIŞ RADARI
     with tab3:
         st.subheader("🏛️ BİST 30 Canlı Taraması & Para Giriş / Çıkış Analizi")
-        
         col_in, col_out = st.columns(2)
         with col_in:
             st.markdown("""
@@ -313,10 +344,116 @@ if raw_df is not None:
         for n in get_daily_news():
             st.success(f"{n['title']} — ({n['category']})")
 
-    # TAB 8: TEFAS FONLARI
+    # TAB 8: TAM EMTİA & TEFAS FONLARI SAYFASI
     with tab8:
-        st.subheader("🌐 TEFAS Fonları ve Global Piyasalar")
-        st.info("TEFAS fon detayları ve döviz emtia verileri aktif şekilde sunulmaktadır.")
+        st.subheader("🌐 Döviz, Emtia, Altın, Gümüş & TEFAS Fonları")
+        
+        # 1. Döviz & Emtia Kartları
+        m_data = get_market_overview()
+        m_cols = st.columns(3)
+        col_idx = 0
+        for name, info in m_data.items():
+            c_class = "green" if info["change"] >= 0 else "red"
+            sign = "+" if info["change"] >= 0 else ""
+            target_col = m_cols[col_idx % 3]
+            target_col.markdown(f"""
+            <div class="market-card">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <b style="font-size:14px; color:#eef3fb;">{name}</b>
+                    <span class="{c_class}" style="font-size:12px; font-weight:700;">{sign}%{info['change']:.2f}</span>
+                </div>
+                <div style="font-size:20px; font-weight:800; margin-top:8px;">{info['unit']}{info['price']:,.2f}</div>
+            </div>
+            """, unsafe_allow_html=True)
+            col_idx += 1
+
+        st.divider()
+
+        # 2. TEFAS FONLARI DETAYLI VERİTABANI
+        st.markdown("#### 📊 TEFAS Yatırım Fonları Terminali")
+        tefas_master_db = {
+            "PUR": {"ad": "ALE PORTFÖY HİSSE SENEDİ FONU (HİSSE YOĞUN FON)", "fiyat": 2.410530, "donem_getiri": 64.20, "donem_yuksek": 2.850000, "donem_dusuk": 1.250000, "kategori_sira": "12 / 200", "kategori": "Hisse Senedi Fonu", "yatirimci": 38450, "toplam_deger": "890,5M ₺", "pazar_payi": "0.45%", "varlik": {"Hisse Senedi": 96.80, "Takasbank Para Piyasası": 3.20}, "getiri": {"1 Ay": 4.20, "3 Ay": 14.80, "6 Ay": 32.50, "1 Yıl": 64.20, "3 Yıl": 210.00, "5 Yıl": 780.00}},
+            "TI2": {"ad": "İŞ PORTFÖY BIST 100 DIŞI ŞİRKETLER HİSSE SENEDİ FONU", "fiyat": 0.310542, "donem_getiri": -78.53, "donem_yuksek": 4.106306, "donem_dusuk": 0.310542, "kategori_sira": "177 / 200", "kategori": "Hisse Senedi Fonu", "yatirimci": 46328, "toplam_deger": "142,5M ₺", "pazar_payi": "0.12%", "varlik": {"Hisse Senedi": 98.66, "Yatırım Fonları Katılma Payları": 1.34}, "getiri": {"1 Ay": 0.00, "3 Ay": 0.00, "6 Ay": 0.00, "1 Yıl": -78.53, "3 Yıl": 120.40, "5 Yıl": 450.20}},
+            "MAC": {"ad": "MARMARA CAPITAL PORTFÖY HİSSE SENEDİ FONU", "fiyat": 0.687890, "donem_getiri": 42.10, "donem_yuksek": 0.750000, "donem_dusuk": 0.450000, "kategori_sira": "25 / 200", "kategori": "Hisse Senedi Fonu", "yatirimci": 82140, "toplam_deger": "1,2B ₺", "pazar_payi": "0.85%", "varlik": {"Hisse Senedi": 94.20, "Takasbank Borçlanma": 5.80}, "getiri": {"1 Ay": 2.10, "3 Ay": 8.40, "6 Ay": 18.50, "1 Yıl": 42.10, "3 Yıl": 210.50, "5 Yıl": 890.30}},
+            "IIH": {"ad": "İSTANBUL PORTFÖY ÜÇÜNCÜ HİSSE SENEDİ FONU", "fiyat": 31.903085, "donem_getiri": 58.40, "donem_yuksek": 35.100000, "donem_dusuk": 18.200000, "kategori_sira": "5 / 200", "kategori": "Hisse Senedi Fonu", "yatirimci": 112000, "toplam_deger": "3,4B ₺", "pazar_payi": "1.80%", "varlik": {"Hisse Senedi": 91.50, "Özel Sektör Tahvili": 8.50}, "getiri": {"1 Ay": 3.40, "3 Ay": 12.10, "6 Ay": 24.80, "1 Yıl": 58.40, "3 Yıl": 340.20, "5 Yıl": 1120.00}},
+            "BIO": {"ad": "AZİMUT PORTFÖY BIST TEKNOLOJİ AĞIRLIKLI HİSSE FONU", "fiyat": 4.120500, "donem_getiri": 72.80, "donem_yuksek": 4.800000, "donem_dusuk": 2.100000, "kategori_sira": "3 / 200", "kategori": "Teknoloji Fonu", "yatirimci": 58900, "toplam_deger": "1,1B ₺", "pazar_payi": "0.65%", "varlik": {"Hisse Senedi": 97.10, "Mevduat": 2.90}, "getiri": {"1 Ay": 5.10, "3 Ay": 18.40, "6 Ay": 41.20, "1 Yıl": 72.80, "3 Yıl": 410.00, "5 Yıl": 1250.00}},
+            "AFT": {"ad": "AK PORTFÖY AMERİKA YABANCI HİSSE SENEDİ FONU", "fiyat": 0.458900, "donem_getiri": 52.10, "donem_yuksek": 0.510000, "donem_dusuk": 0.280000, "kategori_sira": "8 / 200", "kategori": "Yabancı Hisse Fonu", "yatirimci": 94000, "toplam_deger": "2,8B ₺", "pazar_payi": "1.20%", "varlik": {"Yabancı Hisse Senedi": 98.10, "Mevduat": 1.90}, "getiri": {"1 Ay": 3.10, "3 Ay": 11.20, "6 Ay": 28.40, "1 Yıl": 52.10, "3 Yıl": 280.00, "5 Yıl": 890.00}},
+            "TZD": {"ad": "ZİRAAT PORTFÖY BIST TEKNOLOJİ AĞIRLIKLI FON", "fiyat": 3.850000, "donem_getiri": 68.40, "donem_yuksek": 4.200000, "donem_dusuk": 2.050000, "kategori_sira": "6 / 200", "kategori": "Teknoloji Fonu", "yatirimci": 42000, "toplam_deger": "750M ₺", "pazar_payi": "0.40%", "varlik": {"Hisse Senedi": 95.40, "Takasbank": 4.60}, "getiri": {"1 Ay": 4.80, "3 Ay": 16.20, "6 Ay": 38.00, "1 Yıl": 68.40, "3 Yıl": 390.00, "5 Yıl": 1100.00}},
+            "GMR": {"ad": "INVEO PORTFÖY HİSSE SENEDİ FONU", "fiyat": 1.187309, "donem_getiri": 48.90, "donem_yuksek": 1.350000, "donem_dusuk": 0.800000, "kategori_sira": "18 / 200", "kategori": "Hisse Senedi Fonu", "yatirimci": 54100, "toplam_deger": "620M ₺", "pazar_payi": "0.35%", "varlik": {"Hisse Senedi": 93.80, "Katılma Payı": 6.20}, "getiri": {"1 Ay": 2.80, "3 Ay": 9.20, "6 Ay": 20.10, "1 Yıl": 48.90, "3 Yıl": 260.80, "5 Yıl": 910.00}},
+            "YAS": {"ad": "YAPI KREDİ PORTFÖY KOÇ HOLDİNG İŞTİRAKLERİ FONU", "fiyat": 4.120500, "donem_getiri": 52.30, "donem_yuksek": 4.600000, "donem_dusuk": 2.500000, "kategori_sira": "14 / 200", "kategori": "Holding Fonu", "yatirimci": 74500, "toplam_deger": "1,5B ₺", "pazar_payi": "0.75%", "varlik": {"Hisse Senedi": 97.40, "Mevduat": 2.60}, "getiri": {"1 Ay": 2.50, "3 Ay": 11.00, "6 Ay": 22.30, "1 Yıl": 52.30, "3 Yıl": 290.00, "5 Yıl": 980.00}}
+        }
+
+        selected_fon = st.selectbox("🎯 İncelenecek TEFAS Fonunu Seçiniz:", list(tefas_master_db.keys()))
+        f_info = tefas_master_db[selected_fon]
+
+        st.markdown(f"""
+        <div class="card" style="border-left: 4px solid #63a4ff;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <span class="badge bgreen">{selected_fon}</span> <span style="font-size:11px; color:#9ba9bf;">TEFAS FON FİYAT GEÇMİŞİ</span>
+                    <h2 style="margin:6px 0 0 0; font-size:20px;">{f_info['ad']}</h2>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:15px; margin-top:15px; background:#10192a; padding:12px; border-radius:10px;">
+                <div>
+                    <div style="font-size:11px; color:#9ba9bf;">Son Fiyat</div>
+                    <div style="font-size:18px; font-weight:800;">{f_info['fiyat']:.6f} ₺</div>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:#9ba9bf;">Dönem Getirisi</div>
+                    <div class="{'green' if f_info['donem_getiri'] >= 0 else 'red'}" style="font-size:18px; font-weight:800;">%{f_info['donem_getiri']:+.2f}</div>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:#9ba9bf;">Dönem En Yüksek</div>
+                    <div style="font-size:18px; font-weight:800;">{f_info['donem_yuksek']:.6f} ₺</div>
+                </div>
+                <div>
+                    <div style="font-size:11px; color:#9ba9bf;">Dönem En Düşük</div>
+                    <div style="font-size:18px; font-weight:800;">{f_info['donem_dusuk']:.6f} ₺</div>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        fb_col1, fb_col2, fb_col3 = st.columns(3)
+
+        with fb_col1:
+            st.markdown(f"""
+            <div class="card">
+                <h4 style="margin-top:0;">Fon Bilgisi 💰</h4>
+                <table>
+                    <tr><td>Son Fiyat (TL)</td><td><b>{f_info['fiyat']:.6f} ₺</b></td></tr>
+                    <tr><td>Kategori</td><td><b>{f_info['kategori']}</b></td></tr>
+                    <tr><td>Kategori Derecesi</td><td><b>{f_info['kategori_sira']}</b></td></tr>
+                    <tr><td>Yatırımcı Sayısı</td><td><b>{f_info['yatirimci']:,}</b></td></tr>
+                    <tr><td>Fon Toplam Değer</td><td><b>{f_info['toplam_deger']}</b></td></tr>
+                    <tr><td>Pazar Payı</td><td><b>{f_info['pazar_payi']}</b></td></tr>
+                </table>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with fb_col2:
+            st.markdown("""
+            <div class="card">
+                <h4 style="margin-top:0;">Fon Varlık Dağılımı 📊</h4>
+                <table>
+                    <tr><th>Varlık Türü</th><th>Oran (%)</th></tr>
+            """, unsafe_allow_html=True)
+            for v_tur, v_oran in f_info["varlik"].items():
+                st.markdown(f"<tr><td>{v_tur}</td><td><b>%{v_oran:.2f}</b></td></tr>", unsafe_allow_html=True)
+            st.markdown("</table></div>", unsafe_allow_html=True)
+
+        with fb_col3:
+            st.markdown("""
+            <div class="card">
+                <h4 style="margin-top:0;">Getiri Bilgisi 📈</h4>
+                <table>
+                    <tr><th>Dönem</th><th>Getiri (%)</th></tr>
+            """, unsafe_allow_html=True)
+            for g_donem, g_oran in f_info["getiri"].items():
+                g_clr = "green" if g_oran >= 0 else "red"
+                st.markdown(f"<tr><td>Son {g_donem} Getirisi</td><td class='{g_clr}'><b>%{g_oran:+.2f}</b></td></tr>", unsafe_allow_html=True)
+            st.markdown("</table></div>", unsafe_allow_html=True)
 
 else:
     st.error(f"{selected_ticker} verisi alınamadı. Kod adını kontrol ediniz.")
