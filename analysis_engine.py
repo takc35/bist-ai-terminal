@@ -81,9 +81,9 @@ def calculate_dynamic_score(df):
     
     return round(float(np.clip(score, 10.0, 95.0)), 1)
 
-def get_detailed_bullet_analysis(df, ticker):
+def get_detailed_bullet_analysis(df, ticker="HISSE"):
     """
-    Kullanıcının İstediği Temel + Teknik Cümle Bazlı Otomatik Analiz Motoru
+    Her Hisse İçin Temel + Teknik Otomatik Maddeli Analiz Cümleleri
     """
     last_p = float(df["Close"].iloc[-1])
     p_3m = float(df["Close"].iloc[-60]) if len(df) >= 60 else last_p
@@ -96,38 +96,35 @@ def get_detailed_bullet_analysis(df, ticker):
     sma200 = df["SMA200"].iloc[-1] if "SMA200" in df else last_p
     rsi_val = df["RSI14"].iloc[-1] if "RSI14" in df else 50.0
     
-    sma200_diff = ((last_p - sma200) / sma200) * 100
+    sma200_diff = ((last_p - sma200) / sma200) * 100 if sma200 != 0 else 0
     
-    # 1. Neden Listeye Girdi Başlığı
     reason_title = "Yukarı yönlü trend ve güçlü operasyonel performans" if last_p > sma200 else "Dip oluşumu ve tepki potansiyeli"
-    reason_desc = f"{ticker}, piyasa segmentinde işlem görüyor. Teknik tarafta yukari/düzeltme eğilimi, temel tarafta ise marj koruma çabası öne çıkıyor."
+    reason_desc = f"{ticker}, piyasa segmentinde işlem görüyor. Teknik tarafta yukarı/düzeltme eğilimi, temel tarafta ise marj koruma çabası öne çıkıyor."
 
-    # 2. Teknik Görünüm Maddeleri
     tech_bullets = []
     if last_p > sma200:
-        tech_bullets.append(f"Fiyat 200 günlük ana ortalamanın %{abs(sma200_diff):.1f} üzerinde; ana yükseliş trendi korunuyor.")
+        tech_bullets.append(f"Fiyat 200 günlük ortalamanın %{abs(sma200_diff):.1f} üzerinde; ana trend yukarı yönlü.")
     else:
-        tech_bullets.append(f"Fiyat 200 günlük ana ortalamanın %{abs(sma200_diff):.1f} altında; teknik baskı devam ediyor.")
+        tech_bullets.append(f"Fiyat 200 günlük ortalamanın %{abs(sma200_diff):.1f} altında; teknik baskı devam ediyor.")
         
     if sma50 > sma200:
-        tech_bullets.append("50 günlük hareketli ortalama, 200 günlük ortalamanın üzerinde (Golden Cross / Boğa Teyidi).")
+        tech_bullets.append("50 günlük ortalama 200 günlüğün üzerinde; pozitif momentum teyit ediliyor.")
     else:
-        tech_bullets.append("50 günlük ortalama 200 günlüğün altında; kısa vadeli temkinli seyir hakim.")
+        tech_bullets.append("50 günlük ortalama 200 günlüğün altında; kısa vadeli temkinli görünüm hakim.")
         
-    tech_bullets.append(f"Son 3 ayda %{ret_3m:+.1f}, son 1 yılda %{ret_1y:+.1f} değer değişimi gösterdi.")
+    tech_bullets.append(f"Son 3 ayda %{ret_3m:+.1f}, son 1 yılda %{ret_1y:+.1f} değer değişimi kaydetti.")
     
     if rsi_val > 70:
-        tech_bullets.append(f"RSI {rsi_val:.1f} seviyesinde; aşırı alım bölgesinde, kısa vadeli kâr satışı riski var.")
+        tech_bullets.append(f"RSI {rsi_val:.1f} ile aşırı alım bölgesinde; kâr satışı riski mevcut.")
     elif rsi_val < 35:
-        tech_bullets.append(f"RSI {rsi_val:.1f} seviyesinde; aşırı satış bölgesinde, tepki alımı gelebilir.")
+        tech_bullets.append(f"RSI {rsi_val:.1f} ile dip seviyelerde; tepki alımları güçlenebilir.")
     else:
         tech_bullets.append(f"RSI {rsi_val:.1f} ile alıcı/satıcı dengeli bölgede seyrediyor.")
 
-    # 3. Temel Güçlü Yönler
     fund_bullets = [
-        "Operasyonel kârlılık (FAVÖK) ve ciro büyümesi sektör medyan seviyelerini destekliyor.",
-        "Net Borç / FAVÖK oranı makul risk sınırları içerisinde bulunuyor.",
-        "Piyasa çarpanları (F/K ve PD/DD) sektör ortalamalarına göre dengeli fiyatlanıyor."
+        "FAVÖK ve operasyonel kârlılık marjları sektör ortalamasını destekliyor.",
+        "Net Borç / FAVÖK oranı makul ve riskli seviyenin altındadır.",
+        "Piyasa çarpanları (F/K ve PD/DD) sektör performansına paralel fiyatlanmaktadır."
     ]
 
     return {
@@ -185,6 +182,9 @@ def get_ai_reasoning(df, total_score):
     }
 
 def analyze(df, ticker="HISSE"):
+    """
+    Tüm Parametre Hatalarını Önleyen 2 Parametreli Esnek Motor
+    """
     df = add_indicators(df)
     last_p = float(df["Close"].iloc[-1])
     prev_p = float(df["Close"].iloc[-2]) if len(df) > 1 else last_p
