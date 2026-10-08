@@ -24,6 +24,8 @@ def macd(close):
     return line, signal, line - signal
 
 def add_indicators(df):
+    if df is None or df.empty:
+        return None
     df = df.copy()
     c = df["Close"]
     for n in [5, 10, 20, 25, 50, 100, 200]:
@@ -34,6 +36,8 @@ def add_indicators(df):
     return df
 
 def fibonacci_levels(df):
+    if df is None or df.empty:
+        return {f"FIB_{k}": 0.0 for k in ["100", "786", "618", "500", "382", "236", "000"]}
     recent = df.tail(90)
     high = float(recent["High"].max())
     low = float(recent["Low"].min())
@@ -50,6 +54,8 @@ def fibonacci_levels(df):
     }
 
 def calculate_dynamic_score(df):
+    if df is None or df.empty:
+        return 50.0
     last_p = float(df["Close"].iloc[-1])
     score = 50.0
     
@@ -82,12 +88,20 @@ def calculate_dynamic_score(df):
     return round(float(np.clip(score, 10.0, 95.0)), 1)
 
 def get_detailed_bullet_analysis(df, ticker="HISSE"):
+    if df is None or df.empty:
+        return {
+            "reason_title": "Veri Alınamadı",
+            "reason_desc": f"{ticker} için canlı fiyat verisi okunamadı.",
+            "tech_bullets": ["Teknik veri mevcut değil."],
+            "fund_bullets": ["Temel veri mevcut değil."]
+        }
+        
     last_p = float(df["Close"].iloc[-1])
     p_3m = float(df["Close"].iloc[-60]) if len(df) >= 60 else last_p
     p_1y = float(df["Close"].iloc[0]) if len(df) >= 200 else last_p
     
-    ret_3m = ((last_p - p_3m) / p_3m) * 100
-    ret_1y = ((last_p - p_1y) / p_1y) * 100
+    ret_3m = ((last_p - p_3m) / p_3m) * 100 if p_3m != 0 else 0
+    ret_1y = ((last_p - p_1y) / p_1y) * 100 if p_1y != 0 else 0
     
     sma50 = df["SMA50"].iloc[-1] if "SMA50" in df else last_p
     sma200 = df["SMA200"].iloc[-1] if "SMA200" in df else last_p
@@ -130,6 +144,15 @@ def get_detailed_bullet_analysis(df, ticker="HISSE"):
     }
 
 def get_ai_reasoning(df, total_score):
+    if df is None or df.empty:
+        return {
+            "action": "VERİ YOK",
+            "action_class": "byellow",
+            "positives": ["Veri okunamadı."],
+            "negatives": ["Veri okunamadı."],
+            "fibs": {}
+        }
+        
     last_p = float(df["Close"].iloc[-1])
     positives = []
     negatives = []
@@ -177,6 +200,9 @@ def get_ai_reasoning(df, total_score):
     }
 
 def analyze(df, ticker="HISSE"):
+    if df is None or df.empty:
+        return None
+        
     df = add_indicators(df)
     last_p = float(df["Close"].iloc[-1])
     prev_p = float(df["Close"].iloc[-2]) if len(df) > 1 else last_p
