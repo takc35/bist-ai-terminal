@@ -54,7 +54,7 @@ st.markdown("""
 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
     <div>
         <h1 style="margin:0; font-size:26px;">🧠 TUNA BIST AI TERMINAL</h1>
-        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v3.5 Pro</div>
+        <div style="color:#9ba9bf; font-size:12px;">BIST & Global Markets Decision Terminal · v3.8 Pro</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -107,7 +107,7 @@ if raw_df is not None:
         "🌐 Global & TEFAS Fonları"
     ])
 
-    # TAB 1: TEKİL HİSSE ANALİZİ VE İSTEDİĞİN ÖZEL DETAY KARTLARI
+    # TAB 1: TEKİL HİSSE ANALİZİ VE İSTEDİĞİN DETAYLI MADDELİ ANALİZ
     with tab1:
         c_left, c_right = st.columns([1.6, 1])
         with c_left:
@@ -135,14 +135,14 @@ if raw_df is not None:
             st.plotly_chart(fig, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # 📌 KULLANICININ İSTEDİĞİ BİREBİR DETAYLI TEMEL + TEKNİK DEĞERLENDİRME KARTI
+            # 📌 KULLANICININ İSTEDİĞİ MADDELİ TEMEL VE TEKNİK ANALİZ KARTI
             st.markdown(f"""
             <div class="card" style="border-left: 4px solid #35d07f;">
                 <h3 style="margin-top:0;">📌 Neden Listede / Değerlendirme — {selected_ticker}</h3>
                 <b style="color:#63a4ff; font-size:15px;">{det_data['reason_title']}</b>
                 <p style="color:#b7c2d4; font-size:13px; margin-top:4px;">{det_data['reason_desc']}</p>
                 
-                <h4 style="color:#f6c85f; margin:15px 0 5px 0;">📊 Teknik Görünüm Detayları:</h4>
+                <h4 style="color:#f6c85f; margin:15px 0 5px 0;">📊 Teknik Görünüm:</h4>
                 <ul style="font-size:13px; color:#c7d2e4; padding-left:20px; margin-top:0;">
             """, unsafe_allow_html=True)
             
@@ -205,13 +205,6 @@ if raw_df is not None:
                 {"hisse": "KORDS", "ad": "Kordsa Teknik Tekstil", "durum": "Listeye Girdi", "giris": 2.80, "agirlik": "%20.0", "baslik": "Kâr büyümesi eşiği geçti", "neden": "Net kâr ve momentum ivmelendi."},
                 {"hisse": "THYAO", "ad": "Türk Hava Yolları", "durum": "Korundu", "giris": 288.50, "agirlik": "%20.0", "baslik": "Doluluk oranları yüksek", "neden": "RSI ve hacim trendi destekliyor."},
                 {"hisse": "AKBNK", "ad": "Akbank T.A.Ş.", "durum": "Korundu", "giris": 53.20, "agirlik": "%20.0", "baslik": "Net faiz marjı pozitif", "neden": "Göreceli gücü yüksek."}
-            ],
-            "BIST 100 — Aylık Model Portföy (Güncelleme: Ayın 1'i)": [
-                {"hisse": "TUPRS", "ad": "Tüpraş Rafineri", "durum": "Korundu", "giris": 378.00, "agirlik": "%20.0", "baslik": "Rafineri marjları güçlü", "neden": "FAVÖK kârlılığı ve nakit akışı yüksek."},
-                {"hisse": "ASELS", "ad": "Aselsan Elektronik", "durum": "Listeye Girdi", "giris": 60.50, "agirlik": "%20.0", "baslik": "Sözleşme akışları ivme kazandırdı", "neden": "KAP duyuruları ve sipariş büyümesi artıda."},
-                {"hisse": "BIMAS", "ad": "BİM Mağazalar", "durum": "Korundu", "giris": 480.00, "agirlik": "%20.0", "baslik": "Defansif yapısıyla nakit üretiyor", "neden": "İç talep duyarlılığı yüksek."},
-                {"hisse": "SAHOL", "ad": "Sabancı Holding", "durum": "Korundu", "giris": 86.50, "agirlik": "%20.0", "baslik": "Göreceli iskonto avantajı", "neden": "Net aktif değerine göre ucuz kalmayı sürdürüyor."},
-                {"hisse": "EREGL", "ad": "Ereğli Demir Çelik", "durum": "Listeye Girdi", "giris": 36.80, "agirlik": "%20.0", "baslik": "Sektörel dip toparlanması", "neden": "Çelik marjlarında yükseliş trendi teyit edildi."}
             ]
         }
         
