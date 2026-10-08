@@ -17,26 +17,37 @@ def fetch_bist_ticker(symbol):
         return None
     clean_symbol = symbol.strip().upper()
     
-    # Brent Petrol & Emtia Takma Adları
+    # Gram Altın Özel Çekimi
+    if clean_symbol in ["GRAM_ALTIN", "ALTIN", "GRAMALTIN"]:
+        try:
+            ons_df = yf.Ticker("GC=F").history(period="1y")
+            usd_df = yf.Ticker("TRY=X").history(period="1y")
+            
+            if ons_df is not None and not ons_df.empty and usd_df is not None and not usd_df.empty:
+                # Tarih indekslerini timezone uyumsuzluğundan arındır
+                ons_df.index = pd.to_datetime(ons_df.index).tz_localize(None)
+                usd_df.index = pd.to_datetime(usd_df.index).tz_localize(None)
+                
+                merged = pd.merge(ons_df[['Close', 'High', 'Low', 'Open']], usd_df[['Close']], left_index=True, right_index=True, suffixes=('_ons', '_usd'))
+                if not merged.empty:
+                    df = pd.DataFrame(index=merged.index)
+                    df['Close'] = (merged['Close_ons'] * merged['Close_usd']) / 31.1035
+                    df['High'] = (merged['High'] * merged['Close_usd']) / 31.1035
+                    df['Low'] = (merged['Low'] * merged['Close_usd']) / 31.1035
+                    df['Open'] = (merged['Open'] * merged['Close_usd']) / 31.1035
+                    df = df.reset_index()
+                    df.rename(columns={'index': 'Date', 'Date': 'Date'}, inplace=True)
+                    return df.dropna().reset_index(drop=True)
+        except Exception as e:
+            print(f"Gram Altın hesaplama hatası: {e}")
+            
+    # Diğer Emtia ve Döviz Ticker Yönlendirmeleri
     if clean_symbol in ["BRENT", "BRENT_PETROL"]:
         ticker_code = "BZ=F"
-    elif clean_symbol in ["ONS_ALTIN"]:
+    elif clean_symbol in ["ONS_ALTIN", "ONS"]:
         ticker_code = "GC=F"
-    elif clean_symbol in ["GRAM_ALTIN", "ALTIN"]:
-        try:
-            ons = yf.Ticker("GC=F").history(period="5d")
-            usd = yf.Ticker("TRY=X").history(period="5d")
-            if not ons.empty and not usd.empty:
-                df = pd.DataFrame()
-                df['Close'] = (ons['Close'] * usd['Close']) / 31.1035
-                df['High'] = (ons['High'] * usd['High']) / 31.1035
-                df['Low'] = (ons['Low'] * usd['Low']) / 31.1035
-                df['Open'] = (ons['Open'] * usd['Open']) / 31.1035
-                df['Date'] = df.index
-                return df.dropna().reset_index(drop=True)
-        except Exception:
-            pass
-        return None
+    elif clean_symbol in ["GUMUS", "GRAM_GUMUS"]:
+        ticker_code = "SI=F"
     elif not clean_symbol.endswith(".IS") and clean_symbol not in ["USDTRY=X", "EURTRY=X", "GC=F", "CL=F", "BZ=F", "SI=F", "^GSPC", "^IXIC"]:
         ticker_code = f"{clean_symbol}.IS"
     else:
@@ -46,7 +57,7 @@ def fetch_bist_ticker(symbol):
         t = yf.Ticker(ticker_code)
         df = t.history(period="1y")
         
-        # Brent Petrol vadeli kontrat geçişlerinde boş dönerse WTI (CL=F) dene
+        # Brent Petrol kontrat geçişlerinde alternatif WTI (CL=F) dene
         if (df is None or df.empty) and ticker_code == "BZ=F":
             t = yf.Ticker("CL=F")
             df = t.history(period="1y")
@@ -77,7 +88,7 @@ def get_market_overview():
     usd_price = 34.20
     try:
         usd_data = yf.Ticker("TRY=X").history(period="5d")
-        if not usd_data.empty:
+        if usd_data is not None and not usd_data.empty:
             usd_price = float(usd_data['Close'].iloc[-1])
     except Exception:
         pass
